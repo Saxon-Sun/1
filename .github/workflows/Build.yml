@@ -59,6 +59,8 @@ jobs:
     - name: Load custom configuration
       run: |
         cd openwrt
+        sudo -E apt-get -qq install subversion
+        svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/x86.git
         mv `pwd`/x86/* `pwd`/
         mv `pwd`/x86/.config `pwd`/
