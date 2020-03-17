@@ -86,4 +86,8 @@ jobs:
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
+        if [ -f "./bin/targets/*/*" ];then
         `pwd`/upload.sh
+        else
+        echo "文件不存在上传啥子嘛"
+        fi
