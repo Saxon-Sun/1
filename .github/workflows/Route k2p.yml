@@ -79,7 +79,6 @@ jobs:
         cd openwrt
         echo -e "$(nproc) thread compile"
         make -j$(nproc) | tee mak.log || make -j1 V=s
-        mv `pwd`/mak.log `pwd`/bin\targets\
         echo "::set-output name=status::success"
 
     - name: Upload firmware
@@ -87,4 +86,5 @@ jobs:
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
+        mv `pwd`/mak.log `pwd`/bin\targets\
         `pwd`/upload.sh
