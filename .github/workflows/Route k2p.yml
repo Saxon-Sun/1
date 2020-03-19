@@ -70,16 +70,15 @@ jobs:
       id: package
       run: |
         cd openwrt
-        make download -j8 | tee mak.log
+        make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
-        mv `pwd`/mak.log `pwd`/bin\targets\
     - name: Compile the firmware
       id: compile
       run: |
         cd openwrt
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 V=s | tee mak.log
+        make -j$(nproc) | tee mak.log || make -j1 V=s
         mv `pwd`/mak.log `pwd`/bin\targets\
         echo "::set-output name=status::success"
 
