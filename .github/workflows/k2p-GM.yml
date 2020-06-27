@@ -9,8 +9,8 @@
 name: Build OpenWrt
 
 on:
-#  release:
-#    types: published
+  release:
+    types: published
 #  push:
 #    branches:
 #      - master
@@ -18,8 +18,8 @@ on:
 #      - '.config'
 #  schedule:
 #    - cron: 0 8 * * 5
-  watch:
-    types: started
+#  watch:
+#    types: started
 
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
@@ -60,10 +60,9 @@ jobs:
       run: |
         cd openwrt
         sudo -E apt-get -qq install subversion
-        svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
-        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/x86.git
-        mv `pwd`/x86/* `pwd`/
-        mv `pwd`/x86/.config `pwd`/
+        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/k2pgm.git
+        mv `pwd`/k2pgm/* `pwd`/
+        mv `pwd`/k2pgm/.config `pwd`/
         make defconfig
 
     - name: Download package
