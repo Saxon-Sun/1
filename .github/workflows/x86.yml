@@ -89,6 +89,8 @@ jobs:
         du -h --max-depth=1 ./ --exclude=build_dir --exclude=bin
         du -h --max-depth=1 ./build_dir
         du -h --max-depth=1 ./bin
+        rm -rf $(find ./bin/targets/ -type d -name "packages")
+        rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
 
     - name: Upload firmware
       if: always()
