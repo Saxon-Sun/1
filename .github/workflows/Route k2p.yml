@@ -48,7 +48,7 @@ jobs:
           df -h
 
     - name: Clone source code
-      run: git clone $REPO_BRANCH openwrt
+      run: git clone $REPO_URL openwrt
 
     - name: reset hard
       run: cd openwrt && git reset --hard eb64bd0f9b3356d771fbfce39f9f20cff53c3ceb
