@@ -57,8 +57,7 @@ jobs:
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/x86.git
         mv `pwd`/x86/* `pwd`/
         mv `pwd`/x86/.config `pwd`/
-        wget https://raw.githubusercontent.com/coolsnowwolf/packages/29c0e26d2cfa64ef353c32053e1b268e924f8764/net/zerotier/Makefile
-        mv `pwd`/Makefile `pwd`/package/feeds/packages/zerotier/
+        mv `pwd`/x86/zero `pwd`/package/feeds/packages/zerotier/
         cat `pwd`/package/feeds/packages/zerotier/Makefile
         make defconfig
 
