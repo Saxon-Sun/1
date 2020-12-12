@@ -60,8 +60,8 @@ jobs:
         cd openwrt
         sudo -E apt-get -qq install subversion
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/k2pgm.git
-        mv `pwd`/k2pgm/.config `pwd`/
-        mv `pwd`/k2pgm/upload.sh `pwd`/
+        mv `pwd`/k2p/.config `pwd`/
+        mv `pwd`/k2p/upload.sh `pwd`/
         make defconfig
 
     - name: Download package
