@@ -57,7 +57,7 @@ jobs:
 
     - name: Load custom configuration
       run: |
-        svn checkout  https://github.com/project-openwrt/package/trunk/net/zerotier
+        svn checkout  https://github.com/project-openwrt/packages/trunk/net/zerotier
         cd openwrt
         #sudo -E apt-get -qq install subversion
         #svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
