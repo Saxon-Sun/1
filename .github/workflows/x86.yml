@@ -49,7 +49,7 @@ jobs:
       run: |
         cd openwrt
         sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
-        sed -i 's#fw876/helloworld#Mattraks/helloworld.git;Preview##g' ./feeds.conf.default
+        sed -i 's#fw876/helloworld#Mattraks/helloworld.git;develop#g' ./feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
