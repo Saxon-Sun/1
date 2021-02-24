@@ -58,8 +58,6 @@ jobs:
         cd openwrt
         sudo -E apt-get -qq install subversion
         svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
-        #svn checkout  https://github.com/project-openwrt/openwrt/trunk/package/ctcgfw/node-request ./package/openwrt-packages/node-request/
-        #svn checkout  https://github.com/project-openwrt/openwrt/trunk/package/ctcgfw/luci-app-jd-dailybonus ./package/openwrt-packages/luci-app-jd-dailybonus/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/x86.git
         mv `pwd`/x86/* `pwd`/
         mv `pwd`/x86/.config `pwd`/
