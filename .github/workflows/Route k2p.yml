@@ -64,7 +64,7 @@ jobs:
         #sudo -E apt-get -qq install subversion
         #svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/k2p.git
-        #mv `pwd`/k2p/* `pwd`/
+        mv `pwd`/k2p/* `pwd`/
         mv `pwd`/k2p/.config `pwd`/
         make defconfig
 
