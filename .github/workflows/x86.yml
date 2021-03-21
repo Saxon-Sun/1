@@ -61,6 +61,8 @@ jobs:
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/x86.git
         mv `pwd`/x86/* `pwd`/
         mv `pwd`/x86/.config `pwd`/
+        chmod +x diy.sh
+        ./diy.sh
         make defconfig
 
     - name: SSH connection to Actions
