@@ -6,7 +6,7 @@
 # Blog: https://p3terx.com
 #=================================================
 
-name: k2p-test
+name: k2
 
 on:
   repository_dispatch:
@@ -18,7 +18,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_URL: https://github.com/coolsnowwolf/openwrt
   TZ: Asia/Shanghai
 
 jobs:
@@ -46,23 +46,33 @@ jobs:
     - name: Clone source code
       run: git clone $REPO_URL openwrt
 
-#    - name: reset hard
-#      run: cd openwrt && git reset --hard eb64bd0f9b3356d771fbfce39f9f20cff53c3ceb
-
     - name: Update feeds
-      run: cd openwrt && sed -i "s/#src-git helloworld/src-git helloworld/g" feeds.conf.default && ./scripts/feeds update -a
-
-    - name: Install feeds
-      run: cd openwrt && ./scripts/feeds install -a
-
-    - name: Load custom configuration
       run: |
-        cd openwrt
-        sudo -E apt-get -qq install subversion
-        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/k2p.git
-        mv `pwd`/k2p/.config `pwd`/
-        mv `pwd`/k2p/upload.sh `pwd`/
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+    - name: Generate configuration file
+      run: |
+        rm -f ./.config*
+        touch ./.config
+        #
+        # 在 cat >> .config <<EOF 到 EOF 之间粘贴你的编译配置, 需注意缩进关系
+        # 例如:
+        cat >> .config <<EOF
+        CONFIG_TARGET_ramips=y
+        CONFIG_TARGET_ramips_mt7620=y
+        CONFIG_TARGET_ramips_mt7620_DEVICE_phicomm_psg1218a=y
+        CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks=y
+        CONFIG_PACKAGE_luci-app-zerotier=y
+        # CONFIG_PACKAGE_luci-app-nlbwmon is not set
+        # CONFIG_PACKAGE_luci-app-ddns is not set
+        # CONFIG_PACKAGE_luci-app-nlbwmon is not set
+        EOF
+        #
+        # ===============================================================
+        # 
+        sed -i 's/^[ \t]*//g' ./.config
         make defconfig
+
 
     - name: Download package
       id: package
