@@ -48,7 +48,8 @@ jobs:
     - name: Update feeds
       run: |
         cd openwrt
-        sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
+        echo "src-git helloworld https://github.com/fw876/helloworld" >> ./feeds.conf.default
+        #sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
         #sed -i 's#coolsnowwolf/luci#Saxon-Sun/luci#g' ./feeds.conf.default
         #sed -i 's#coolsnowwolf/packages#Saxon-Sun/packages-2#g' ./feeds.conf.default
         #sed -i 's#fw876/helloworld#Mattraks/helloworld.git;develop#g' ./feeds.conf.default
