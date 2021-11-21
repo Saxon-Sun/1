@@ -6,7 +6,7 @@
 # Blog: https://p3terx.com
 #=================================================
 
-name: Phicomm-N1
+name: test
 
 on:
   repository_dispatch:
