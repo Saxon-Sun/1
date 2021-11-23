@@ -52,7 +52,7 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         
     - name: Package Armvirt as OpenWrt
-      uses: unifreq/openwrt_packit@master
+      uses: Saxon-Sun/openwrt_packit@master
       env:
         OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
         PACKAGE_SOC: s905d
