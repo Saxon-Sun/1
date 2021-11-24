@@ -99,9 +99,10 @@ jobs:
         du -h --max-depth=1 ./bin
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
+        echo "::set-output name=status::success"
 
     - name: Upload firmware
-      if: steps.build.outputs.status == 'success' && !cancelled()
+      if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
