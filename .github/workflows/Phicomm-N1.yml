@@ -117,7 +117,7 @@ jobs:
         KERNEL_VERSION_NAME: 5.4.153
 
     - name: Upload firmware
-      id: Upload firmware
+      if: steps.build.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
