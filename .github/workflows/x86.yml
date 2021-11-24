@@ -101,7 +101,7 @@ jobs:
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
 
     - name: Upload firmware
-      id: Upload firmware
+      if: steps.build.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
