@@ -58,7 +58,6 @@ jobs:
         mv `pwd`/Phicomm-N1/.config `pwd`/
         chmod +x diy.sh
         ./diy.sh
-        make defconfig
 
     - name: Update feeds
       run: |
@@ -66,6 +65,7 @@ jobs:
         cat ./feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
+        make defconfig
 
     - name: SSH connection to Actions
       uses: Saxon-Sun/ssh2actions@main
