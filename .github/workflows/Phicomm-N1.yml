@@ -49,30 +49,23 @@ jobs:
     - name: Clone source code
       run: git clone $REPO_URL openwrt
 
-    - name: Update feeds
-      run: |
-        cd openwrt
-        echo "src-git helloworld https://github.com/fw876/helloworld" >> ./feeds.conf.default
-        #sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
-        #sed -i 's#coolsnowwolf/luci#Saxon-Sun/luci#g' ./feeds.conf.default
-        #sed -i 's#coolsnowwolf/packages#Saxon-Sun/packages-2#g' ./feeds.conf.default
-        #sed -i 's#fw876/helloworld#Mattraks/helloworld.git;develop#g' ./feeds.conf.default
-        cat ./feeds.conf.default
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
-
     - name: Load custom configuration
       run: |
         cd openwrt
         sudo -E apt-get -qq install subversion
-        #svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
-        svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Phicomm-N1.git
         mv `pwd`/Phicomm-N1/* `pwd`/
         mv `pwd`/Phicomm-N1/.config `pwd`/
         chmod +x diy.sh
         ./diy.sh
         make defconfig
+
+    - name: Update feeds
+      run: |
+        cd openwrt
+        cat ./feeds.conf.default
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
 
     - name: SSH connection to Actions
       uses: Saxon-Sun/ssh2actions@main
