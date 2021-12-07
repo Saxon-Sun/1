@@ -45,7 +45,6 @@ jobs:
           sudo -E apt-get clean
           
           df -h
-
     - name: Clone source code
       run: git clone $REPO_URL openwrt
 
@@ -58,7 +57,6 @@ jobs:
         mv `pwd`/Phicomm-N1/.config `pwd`/
         chmod +x diy.sh
         ./diy.sh
-
     - name: Update feeds
       run: |
         cd openwrt
@@ -71,14 +69,10 @@ jobs:
         rm -rf theme-temp/luci-theme-opentomcat/README.md
         mv -f theme-temp/luci-theme-opentomcat package/lean/
         rm -rf theme-temp
-        make defconfig
         #default_theme='opentomcat'
         sed -i "s/bootstrap/$default_theme/g" feeds/luci/modules/luci-base/root/etc/config/luci
         # Add luci-theme-opentomcat
-        cd package/lean/
-        rm -rf luci-theme-argon
-        git clone -b 18.06 https://github.com/jerrykuku/luci-theme-argon.git
-
+        make defconfig
     - name: SSH connection to Actions
       uses: Saxon-Sun/ssh2actions@main
       if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
@@ -105,7 +99,6 @@ jobs:
         ls -al
         rm -rf packages openwrt-armvirt-64-default.manifest openwrt-armvirt-64-Image sha256sums version.buildinfo feeds.buildinfo openwrt-armvirt-64-rootfs-ext4.img 
         echo "::set-output name=status::success"
-
     - name: Package Armvirt as OpenWrt
       uses: unifreq/openwrt_packit@master
       env:
