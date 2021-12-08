@@ -48,6 +48,7 @@ jobs:
       run: |
         cd openwrt
         echo "src-git helloworld https://github.com/fw876/helloworld" >> ./feeds.conf.default
+        echo "src-git cdnspeedtest https://github.com/immortalwrt-collections/openwrt-cdnspeedtest.git" >> "feeds.conf.default"
         #sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
         #sed -i 's#coolsnowwolf/luci#Saxon-Sun/luci#g' ./feeds.conf.default
         #sed -i 's#coolsnowwolf/packages#Saxon-Sun/packages-2#g' ./feeds.conf.default
@@ -60,7 +61,7 @@ jobs:
         cd openwrt
         sudo -E apt-get -qq install subversion
         #svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
-        svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
+        #svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/x86.git
         mv `pwd`/x86/* `pwd`/
         mv `pwd`/x86/.config `pwd`/
