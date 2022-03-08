@@ -62,9 +62,9 @@ jobs:
         sudo -E apt-get -qq install subversion
         #svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
         #svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
-        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/x86.git
-        mv `pwd`/x86/* `pwd`/
-        mv `pwd`/x86/.config `pwd`/
+        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
+        mv `pwd`/Route-config-Files/x86/* `pwd`/
+        mv `pwd`/Route-config-Files/x86/.config `pwd`/
         chmod +x diy.sh
         ./diy.sh
         make defconfig

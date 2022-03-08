@@ -6,7 +6,7 @@
 # Blog: https://p3terx.com
 #=================================================
 
-name: Phicomm-N1
+name: JDC-RE-SP-01B
 
 on:
   repository_dispatch:
@@ -67,8 +67,8 @@ jobs:
         #svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
         svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
-        mv `pwd`/Route-config-Files/Phicomm-N1/* `pwd`/
-        mv `pwd`/Route-config-Files/Phicomm-N1/.config `pwd`/
+        mv `pwd`/Route-config-Files/JDC-RE-SP-01B/* `pwd`/
+        mv `pwd`/Route-config-Files/JDC-RE-SP-01B/.config `pwd`/
         chmod +x diy.sh
         ./diy.sh
         make defconfig
