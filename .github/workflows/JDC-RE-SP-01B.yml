@@ -54,12 +54,8 @@ jobs:
     - name: Update feeds
       run: |
         cd openwrt
-        echo "src-git helloworld https://github.com/fw876/helloworld" >> ./feeds.conf.default
         echo "src-git cdnspeedtest https://github.com/immortalwrt-collections/openwrt-cdnspeedtest.git" >> "feeds.conf.default"
         #sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
-        #sed -i 's#coolsnowwolf/luci#Saxon-Sun/luci#g' ./feeds.conf.default
-        #sed -i 's#coolsnowwolf/packages#Saxon-Sun/packages-2#g' ./feeds.conf.default
-        #sed -i 's#fw876/helloworld#Mattraks/helloworld.git;develop#g' ./feeds.conf.default
         cat ./feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
