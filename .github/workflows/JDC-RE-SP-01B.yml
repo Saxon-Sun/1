@@ -91,6 +91,7 @@ jobs:
         du -h --max-depth=1 ./bin
         cd bin/targets/*/*
         ls -al
+        rm -rf packages openwrt-ramips-mt7621-jdcloud_re-sp-01b-initramfs-kernel.bin openwrt-ramips-mt7621-jdcloud_re-sp-01b.manifest
         echo "::set-output name=status::success"
 
     - name: Upload firmware
