@@ -18,7 +18,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/coolsnowwolf/openwrt
+  REPO_URL: https://github.com/Saxon-Sun/openwrt
   REPO_BRANCH: lede-17.01
 
 jobs:
