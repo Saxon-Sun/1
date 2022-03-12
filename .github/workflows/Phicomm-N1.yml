@@ -19,6 +19,7 @@ on:
 
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: openwrt-18.06
 
 jobs:
   build:
@@ -46,7 +47,9 @@ jobs:
           df -h
 
     - name: Clone source code
-      run: git clone $REPO_URL openwrt
+      run: |
+        df -hT $PWD
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
 
     - name: Update feeds
       run: |
