@@ -18,8 +18,8 @@ on:
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/Saxon-Sun/openwrt
-  REPO_BRANCH: lede-17.01
+  REPO_URL: https://github.com/immortalwrt/immortalwrt.git
+  REPO_BRANCH: openwrt-18.06
 
 jobs:
   build:
