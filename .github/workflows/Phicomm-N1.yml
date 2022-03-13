@@ -24,6 +24,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 500 # job全体
     
     if: github.event.repository.owner.id == github.event.sender.id
 
