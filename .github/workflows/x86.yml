@@ -14,8 +14,8 @@ on:
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: openwrt-21.02
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
 
 jobs:
   build:
@@ -45,10 +45,16 @@ jobs:
       run: |
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
-
+        
     - name: Update feeds
       run: |
         cd openwrt
+        echo "src-git helloworld https://github.com/fw876/helloworld" >> ./feeds.conf.default
+        echo "src-git cdnspeedtest https://github.com/immortalwrt-collections/openwrt-cdnspeedtest.git" >> "feeds.conf.default"
+        #sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
+        #sed -i 's#coolsnowwolf/luci#Saxon-Sun/luci#g' ./feeds.conf.default
+        #sed -i 's#coolsnowwolf/packages#Saxon-Sun/packages-2#g' ./feeds.conf.default
+        #sed -i 's#fw876/helloworld#Mattraks/helloworld.git;develop#g' ./feeds.conf.default
         cat ./feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
@@ -57,6 +63,8 @@ jobs:
       run: |
         cd openwrt
         sudo -E apt-get -qq install subversion
+        #svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
+        #svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         mv `pwd`/Route-config-Files/x86/* `pwd`/
         mv `pwd`/Route-config-Files/x86/.config `pwd`/
@@ -94,7 +102,6 @@ jobs:
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
         echo "::set-output name=status::success"
-        
     - name: Upload firmware
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
