@@ -67,9 +67,9 @@ jobs:
         #svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         mv `pwd`/Route-config-Files/x86/* `pwd`/
-        mv `pwd`/Route-config-Files/x86/.config `pwd`/
         chmod +x diy.sh
         ./diy.sh
+        mv `pwd`/Route-config-Files/x86/.config `pwd`/
         make defconfig
 
     - name: SSH connection to Actions
