@@ -75,7 +75,12 @@ jobs:
         mv `pwd`/Route-config-Files/Phicomm-N1/.config `pwd`/
         make defconfig
 
-
+    - name: SSH connection to Actions
+      uses: Saxon-Sun/ssh2actions@main
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
     - name: Download package
       id: package
@@ -96,14 +101,7 @@ jobs:
         ls -al
         rm -rf packages openwrt-armvirt-64-default.manifest openwrt-armvirt-64-Image sha256sums version.buildinfo feeds.buildinfo openwrt-armvirt-64-rootfs-ext4.img 
         echo "::set-output name=status::success"
-        
-    - name: SSH connection to Actions
-      uses: Saxon-Sun/ssh2actions@main
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        
+
     - name: Package Armvirt as OpenWrt
       uses: unifreq/openwrt_packit@master
       env:
