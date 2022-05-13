@@ -42,12 +42,19 @@ jobs:
           df -h
 
     - name: Clone source code
-      run: git clone $REPO_URL openwrt
-
+      run: |
+        df -hT $PWD
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        
     - name: Update feeds
       run: |
         cd openwrt
         echo "src-git helloworld https://github.com/fw876/helloworld" >> ./feeds.conf.default
+        echo "src-git cdnspeedtest https://github.com/immortalwrt-collections/openwrt-cdnspeedtest.git" >> "feeds.conf.default"
+        #sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
+        #sed -i 's#coolsnowwolf/luci#Saxon-Sun/luci#g' ./feeds.conf.default
+        #sed -i 's#coolsnowwolf/packages#Saxon-Sun/packages-2#g' ./feeds.conf.default
+        #sed -i 's#fw876/helloworld#Mattraks/helloworld.git;develop#g' ./feeds.conf.default
         cat ./feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
@@ -56,12 +63,13 @@ jobs:
       run: |
         cd openwrt
         sudo -E apt-get -qq install subversion
-        svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
-        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/br-x86.git
-        mv `pwd`/br-x86/* `pwd`/
-        mv `pwd`/br-x86/.config `pwd`/
-        #chmod +x diy.sh
-        #./diy.sh
+        #svn checkout  https://github.com/Saxon-Sun/package/trunk/luci-app-pptp-server ./package/openwrt-packages/luci-app-pptp-server/
+        #svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
+        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
+        mv `pwd`/Route-config-Files/br-x86/* `pwd`/
+        chmod +x diy.sh
+        ./diy.sh
+        mv `pwd`/Route-config-Files/br-x86/.config `pwd`/
         make defconfig
 
     - name: SSH connection to Actions
@@ -82,7 +90,7 @@ jobs:
       id: compile
       run: |
         cd openwrt
-        make -j$(nproc) || make -j1 V=s
+        make -j$(nproc) 2>&1|tee ./xxx.log|| make -j1 V=s 2>&1|tee ./xxx.log
         echo "======================="
         echo "Space usage:"
         echo "======================="
@@ -93,14 +101,15 @@ jobs:
         du -h --max-depth=1 ./bin
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
-
+        echo "::set-output name=status::success"
+        
     - name: Upload firmware
-      if: always()
+      if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
         `pwd`/upload.sh
-        
+
     - name: Delete workflow runs
       uses: GitRML/delete-workflow-runs@main
       with:

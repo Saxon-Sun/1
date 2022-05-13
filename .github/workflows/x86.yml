@@ -102,6 +102,7 @@ jobs:
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
         echo "::set-output name=status::success"
+        
     - name: Upload firmware
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
