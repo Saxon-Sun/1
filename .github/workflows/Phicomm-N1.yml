@@ -56,6 +56,7 @@ jobs:
         cd openwrt
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         mv `pwd`/Route-config-Files/Phicomm-N1/* `pwd`/
+        cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
         chmod +x feed.sh
         ./feed.sh
         cat ./feeds.conf.default
