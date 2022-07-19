@@ -73,6 +73,7 @@ jobs:
         sudo -E apt-get -qq install subversion
         chmod +x diy.sh
         ./diy.sh
+        mv `pwd`/Route-config-Files/packages/* `pwd`/package/lean/
         mv `pwd`/Route-config-Files/Phicomm-N1/.config `pwd`/
         make defconfig
 
