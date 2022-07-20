@@ -49,6 +49,7 @@ jobs:
     - name: Update feeds
       run: |
         cd openwrt
+        git reset --hard 51f606ec99b1e29ada9f7913925dcd6d6198e306
         echo "src-git helloworld https://github.com/fw876/helloworld" >> ./feeds.conf.default
         echo "src-git cdnspeedtest https://github.com/immortalwrt-collections/openwrt-cdnspeedtest.git" >> "feeds.conf.default"
         #sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
