@@ -109,7 +109,7 @@ jobs:
       env:
         OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
         PACKAGE_SOC: s905d
-        KERNEL_VERSION_NAME: 5.15.35
+        KERNEL_VERSION_NAME: 5.15.86
         WHOAMI: Saxon
 
     - name: Upload firmware
