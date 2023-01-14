@@ -28,8 +28,8 @@ jobs:
     - name: Maximize build space
       uses: easimon/maximize-build-space@master
       with:
-        root-reserve-mb: 2048
-        swap-size-mb: 2048
+        root-reserve-mb: 3072
+        swap-size-mb: 4096
         remove-dotnet: 'true'
 
     - name: Checkout
@@ -37,7 +37,7 @@ jobs:
       with:
         ref: master 
 
-    - name: Space cleanup
+    - name: Install Compilation Dependencies
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -116,7 +116,9 @@ jobs:
         `pwd`/upload.sh
 
     - name: Delete workflow runs
-      uses: GitRML/delete-workflow-runs@main
+      uses: Mattraks/delete-workflow-runs@v2
       with:
+        token: ${{ github.token }}
+        repository: ${{ github.repository }}
         retain_days: 2
         keep_minimum_runs: 3
