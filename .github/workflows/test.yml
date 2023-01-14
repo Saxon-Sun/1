@@ -42,7 +42,7 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-          echo "{status}={success}" >> $GITHUB_OUTPUT
+          echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware
       if: steps.compile.outputs.status == 'success' && !cancelled()
