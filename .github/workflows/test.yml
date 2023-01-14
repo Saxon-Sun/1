@@ -38,14 +38,14 @@ jobs:
         ref: master 
 
     - name: Install Compilation Dependencies
+      id: compile
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-          sudo -E apt-get update
           echo "{status}={success}" >> $GITHUB_OUTPUT
 
     - name: Upload firmware
-      if: steps.compile.output.status == 'success' && !cancelled()
+      if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
