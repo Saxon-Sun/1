@@ -42,7 +42,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
           sudo -E apt-get update
-          echo "status=success" >> $GITHUB_OUTPUT
+          echo "status=success" >> $GITHUB_steps
 
     - name: Upload firmware
       if: steps.compile.outputs.status == 'success' && !cancelled()
