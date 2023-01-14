@@ -1,0 +1,66 @@
+#=================================================
+# https://github.com/P3TERX/Actions-OpenWrt
+#=================================================
+
+name: X86
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
+
+env:
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    if: github.event.repository.owner.id == github.event.sender.id
+
+    steps:
+
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@master
+      with:
+        root-reserve-mb: 6144
+        swap-size-mb: 4096
+        remove-dotnet: 'true'
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        ref: master 
+
+    - name: Install Compilation Dependencies
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+          sudo -E apt-get update
+          sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3 unzip zlib1g-dev lib32gcc-s1 libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler antlr3 gperf swig
+
+    - name: Clone source code
+      run: |
+        df -hT $PWD
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        echo "status::success"" >> $GITHUB_OUTPUT
+
+    - name: Upload firmware
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        cd openwrt/
+        chmod +x `pwd`/upload.sh
+        echo "successed"
+
+    - name: Delete workflow runs
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        token: ${{ github.token }}
+        repository: ${{ github.repository }}
+        retain_days: 2
+        keep_minimum_runs: 3
