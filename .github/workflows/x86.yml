@@ -106,7 +106,7 @@ jobs:
         du -h --max-depth=1 ./bin
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
-        echo "::set-output name=status::success"
+        echo "status::success"" >> $GITHUB_OUTPUT
 
     - name: Upload firmware
       if: steps.compile.outputs.status == 'success' && !cancelled()
