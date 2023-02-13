@@ -18,10 +18,10 @@ env:
   REPO_BRANCH: master
 
 jobs:
+
   build:
+
     runs-on: ubuntu-latest
-    
-    if: github.event.repository.owner.id == github.event.sender.id
 
     steps:
 
@@ -34,8 +34,6 @@ jobs:
 
     - name: Checkout
       uses: actions/checkout@v3
-      with:
-        ref: master 
 
     - name: Install Compilation Dependencies
       env:
@@ -85,11 +83,9 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
     - name: Download package
-      id: package
       run: |
         cd openwrt
-        make download -j8
-        find dl -size -1024c -exec rm -f {} \;
+        make download -j16
 
     - name: Compile the firmware
       id: compile
