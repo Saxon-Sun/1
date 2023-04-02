@@ -119,8 +119,6 @@ jobs:
         cd openwrt/
         chmod +x `pwd`/upload.sh
         `pwd`/upload.sh
-        mkdir -p ./artifact/firmware
-        mv Phicomm-N1.zip ./artifact/firmware/
 
     - name: Upload firmware
       uses: actions/upload-artifact@v3
