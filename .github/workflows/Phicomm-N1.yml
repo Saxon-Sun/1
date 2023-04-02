@@ -113,12 +113,20 @@ jobs:
         KERNEL_VERSION_NAME: 6.1.9
         WHOAMI: Saxon
 
-    - name: Upload firmware
+    - name: Prepare artifact
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
         `pwd`/upload.sh
+        mkdir -p ./artifact/firmware
+        mv Phicomm-N1.zip ./artifact/firmware/
+
+    - name: Upload firmware
+      uses: actions/upload-artifact@v3
+      with:
+        name: OpenWrt_firmware
+        path: ./openwrt/artifact/firmware
         
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2
