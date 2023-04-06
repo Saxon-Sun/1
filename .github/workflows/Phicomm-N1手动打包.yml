@@ -1,4 +1,4 @@
-name: Phicomm-N1
+name: Phicomm-N1手动打包
 
 on:
   repository_dispatch:
