@@ -39,7 +39,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
           sudo -E apt-get update
-          sudo -E apt-get -y install tmate curl gawk gperf intltool lrzsz mkisofs msmtp nano patch pkgconf scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget
+          sudo -E apt-get -y install tmate curl gawk gperf intltool lrzsz mkisofs nano patch pkgconf scons squashfs-tools subversion texinfo uglifyjs unzip vim wget
           df -h
 
     - name: Load Bin
@@ -48,7 +48,8 @@ jobs:
         cd openwrt
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         mv `pwd`/Route-config-Files/Phicomm-N1/* `pwd`/
-        wget ${{ inputs.Bin-url }}
+        chmod +x `pwd`/download.sh
+        `pwd`/download.sh
 
     - name: SSH connection to Actions
       uses: Saxon-Sun/ssh2actions@main
