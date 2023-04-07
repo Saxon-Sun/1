@@ -47,9 +47,11 @@ jobs:
     - name: Update feeds
       run: |
         cd openwrt
+        # Add a feed source
         echo "src-git helloworld https://github.com/fw876/helloworld" >> ./feeds.conf.default
-        #sed -i 's/#src-git helloworld/src-git helloworld/g' ./feeds.conf.default
-        #sed -i 's#fw876/helloworld#Mattraks/helloworld.git;develop#g' ./feeds.conf.default
+        sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
+        sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
+        # Add a feed source
         cat ./feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
@@ -57,8 +59,6 @@ jobs:
     - name: Load custom configuration
       run: |
         cd openwrt
-        sudo -E apt-get -qq install subversion
-        #svn checkout  https://github.com/lisaac/luci-app-dockerman/trunk/applications/luci-app-dockerman ./package/openwrt-packages/luci-app-dockerman/
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         mv `pwd`/Route-config-Files/x86/* `pwd`/
         cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
