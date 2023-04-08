@@ -55,23 +55,25 @@ jobs:
     - name: Update feeds
       run: |
         cd openwrt
-        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
-        mv `pwd`/Route-config-Files/Phicomm-N1/* `pwd`/
-        cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
-        chmod +x feed.sh
-        ./feed.sh
+        sudo -E apt-get -qq install subversion
+        svn co https://github.com/ophub/luci-app-amlogic/trunk/luci-app-amlogic ./package/luci-app-amlogic
+        # Add a feed source
+        cat >> feeds.conf.default <<EOF
+        src-git helloworld https://github.com/fw876/helloworld
+        src-git kenzo https://github.com/kenzok8/openwrt-packages
+        src-git small https://github.com/kenzok8/small
+        EOF
+        # Add a feed source
         cat ./feeds.conf.default
         ./scripts/feeds update -a
-
-    - name: Install feeds
-      run: |
-        cd openwrt
         ./scripts/feeds install -a
 
     - name: Load custom configuration
       run: |
         cd openwrt
-        sudo -E apt-get -qq install subversion
+        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
+        mv `pwd`/Route-config-Files/Phicomm-N1/* `pwd`/
+        cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
         chmod +x diy.sh
         ./diy.sh
         mv `pwd`/Route-config-Files/packages/* `pwd`/package/lean/
@@ -89,8 +91,7 @@ jobs:
       id: package
       run: |
         cd openwrt
-        make download -j8
-        find dl -size -1024c -exec rm -f {} \;
+        make download -j16
         
     - name: Compile the firmware
       id: compile
@@ -120,12 +121,6 @@ jobs:
         chmod +x `pwd`/upload.sh
         `pwd`/upload.sh
 
-    - name: Upload firmware
-      uses: actions/upload-artifact@v3
-      with:
-        name: OpenWrt_firmware
-        path: ./openwrt/artifact/firmware
-        
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2
       with:
