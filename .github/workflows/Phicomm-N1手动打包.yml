@@ -66,6 +66,7 @@ jobs:
         WHOAMI: Saxon
 
     - name: Prepare artifact
+      if: env.PACKAGED_STATUS == 'success' && !cancelled()
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
