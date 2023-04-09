@@ -23,11 +23,11 @@ jobs:
     - name: Maximize build space
       uses: easimon/maximize-build-space@master
       with:
-        root-reserve-mb: 7168
+        root-reserve-mb: 10240
         swap-size-mb: 4096
         remove-dotnet: 'true'
         remove-android: 'true'
-        remove-docker-images: 'false'
+        remove-docker-images: 'true'
         remove-codeql: 'true'
 
     - name: Checkout
