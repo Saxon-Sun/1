@@ -58,9 +58,10 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
     - name: Package Armvirt as OpenWrt
+      if: steps.compile.outputs.status == 'success' && !cancelled()
       uses: unifreq/openwrt_packit@master
       env:
-        OPENWRT_ARMVIRT: openwrt/*.tar.gz
+        OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
         PACKAGE_SOC: s905d
         KERNEL_VERSION_NAME: 6.1.9
         WHOAMI: Saxon
@@ -72,11 +73,6 @@ jobs:
         chmod +x `pwd`/upload.sh
         `pwd`/upload.sh
 
-    - name: Upload firmware
-      uses: actions/upload-artifact@v3
-      with:
-        name: OpenWrt_firmware
-        path: ./openwrt/artifact/firmware
         
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2

@@ -113,6 +113,7 @@ jobs:
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Package Armvirt as OpenWrt
+      if: steps.compile.outputs.status == 'success' && !cancelled()
       uses: unifreq/openwrt_packit@master
       env:
         OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
@@ -121,7 +122,7 @@ jobs:
         WHOAMI: Saxon
 
     - name: Prepare artifact
-      if: steps.compile.outputs.status == 'success' && !cancelled()
+      if: env.PACKAGED_STATUS == 'success' && !cancelled()
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
