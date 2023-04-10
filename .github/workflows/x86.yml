@@ -101,6 +101,8 @@ jobs:
         du -h --max-depth=1 ./bin
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
+        ls bin/targets/*/*
+        rm -rf build_dir 
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware
