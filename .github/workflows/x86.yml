@@ -107,6 +107,7 @@ jobs:
 
     - name: Prepare artifact
       run: |
+        cd openwrt
         mkdir -p ./artifact/firmware
         mkdir -p ./artifact/package
         rm -rf $(find ./bin/targets/ -type d -name "packages")
