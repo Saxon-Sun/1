@@ -11,8 +11,8 @@ on:
 
 env:
   targets_targets: immortalwrt-x86
-  REPO_URL: https://github.com/coolsnowwolf/lede
-  REPO_BRANCH: master
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: openwrt-23.05
 
 jobs:
 
