@@ -54,8 +54,8 @@ jobs:
         cd openwrt
         # Add a feed source
         cat >> feeds.conf.default <<EOF
-        src-git kenzo https://github.com/kenzok8/openwrt-packages
-        src-git small https://github.com/kenzok8/small
+        # src-git kenzo https://github.com/kenzok8/openwrt-packages
+        # src-git small https://github.com/kenzok8/small
         EOF
         # Add a feed source
         cat ./feeds.conf.default
