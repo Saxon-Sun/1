@@ -66,13 +66,13 @@ jobs:
       run: |
         cd openwrt
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
-        # mv `pwd`/Route-config-Files/"$targets_targets"/* `pwd`/
-        # cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
-        # chmod +x diy.sh
-        # ./diy.sh
-        # mv `pwd`/Route-config-Files/packages/* `pwd`/package/lean/
-        # mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
-        # make defconfig
+        mv `pwd`/Route-config-Files/"$targets_targets"/* `pwd`/
+        cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
+        chmod +x diy.sh
+        ./diy.sh
+        mv `pwd`/Route-config-Files/packages/* `pwd`/package/lean/
+        mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
+        make defconfig
 
     - name: SSH connection to Actions
       uses: Saxon-Sun/ssh2actions@main
@@ -84,13 +84,6 @@ jobs:
     - name: Download package
       run: |
         cd openwrt
-        mv `pwd`/Route-config-Files/"$targets_targets"/* `pwd`/
-        cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
-        chmod +x diy.sh
-        ./diy.sh
-        mv `pwd`/Route-config-Files/packages/* `pwd`/package/lean/
-        mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
-        make defconfig
         make download -j16
 
     - name: Compile the firmware
