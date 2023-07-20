@@ -73,7 +73,7 @@ jobs:
         ./diy.sh
         mv `pwd`/Route-config-Files/packages/* `pwd`/package/lean/
         mv `pwd`/Route-config-Files/x86/.config `pwd`/
-        make defconfig
+        # make defconfig
 
     - name: SSH connection to Actions
       uses: Saxon-Sun/ssh2actions@main
