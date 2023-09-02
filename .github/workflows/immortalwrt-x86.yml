@@ -89,6 +89,7 @@ jobs:
       run: |
         cd openwrt
         make -j$(nproc) 2>&1|tee ./xxx.log || make -j1 V=s 2>&1|tee ./xxx.log
+        make -j1 V=s |tee ./xxx.log
         echo "======================="
         echo "Space usage:"
         echo "======================="
