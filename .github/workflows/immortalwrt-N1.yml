@@ -24,7 +24,7 @@ jobs:
     - name: Maximize build space
       uses: easimon/maximize-build-space@master
       with:
-        root-reserve-mb: 6144
+        root-reserve-mb: 5120
         swap-size-mb: 4096
         remove-dotnet: 'true'
         remove-android: 'true'
@@ -99,7 +99,7 @@ jobs:
         echo "======================="
         df -h
         echo "======================="
-        make -j1 V=s |tee ./xxx.log
+        #make -j1 V=s |tee ./xxx.log
         du -h --max-depth=1 ./ --exclude=build_dir --exclude=bin
         du -h --max-depth=1 ./build_dir
         du -h --max-depth=1 ./bin
