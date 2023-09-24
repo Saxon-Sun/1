@@ -27,10 +27,10 @@ jobs:
         tool-cache: true
         android: true
         dotnet: true
-        haskell: true
+        haskell: false
         large-packages: true
         docker-images: true
-        swap-storage: true
+        swap-storage: false
 
     - name: Checkout
       uses: actions/checkout@v3
