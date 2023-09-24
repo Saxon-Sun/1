@@ -106,6 +106,7 @@ jobs:
         du -h --max-depth=1 ./build_dir
         du -h --max-depth=1 ./bin
         rm -rf build_dir
+        df -h
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
         ls bin/targets/*/*
