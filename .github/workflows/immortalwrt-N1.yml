@@ -123,7 +123,8 @@ jobs:
         cd openwrt/
         ls /opt/openwrt_packit/output
         rm -rf /opt/openwrt_packit/output/*.tar.gz
-        mv /opt/openwrt_packit/output/* ./artifact/package/
+        cp -rf $(find ./bin/targets/ -type f) ./artifact/firmware/
+        mv /opt/openwrt_packit/output/* ./artifact/firmware/
         chmod +x `pwd`/upload.sh
         `pwd`/upload.sh $targets_targets
 
