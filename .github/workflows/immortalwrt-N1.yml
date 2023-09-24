@@ -99,7 +99,7 @@ jobs:
         echo "======================="
         df -h
         echo "======================="
-        #make -j1 V=s |tee ./xxx.log
+        #make -j1 V=s
         du -h --max-depth=1 ./ --exclude=build_dir --exclude=bin
         du -h --max-depth=1 ./build_dir
         du -h --max-depth=1 ./bin
