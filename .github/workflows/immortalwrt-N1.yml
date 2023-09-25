@@ -78,13 +78,6 @@ jobs:
         mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
         make defconfig
 
-    - name: SSH connection to Actions
-      uses: Saxon-Sun/ssh2actions@main
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-
     - name: Download package
       id: package
       run: |
@@ -111,6 +104,13 @@ jobs:
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
         ls bin/targets/*/*
         echo "status=success" >> $GITHUB_OUTPUT
+        
+    - name: SSH connection to Actions
+      uses: Saxon-Sun/ssh2actions@main
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
     - name: Package Armvirt as OpenWrt
       if: steps.compile.outputs.status == 'success' && !cancelled()
