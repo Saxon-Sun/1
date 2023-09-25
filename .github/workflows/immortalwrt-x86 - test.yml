@@ -97,7 +97,7 @@ jobs:
         du -h --max-depth=1 ./bin
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
-        rm -rf build_dir
+        #rm -rf build_dir
         df -h
         ls bin/targets/*/*
         echo "status=success" >> $GITHUB_OUTPUT
