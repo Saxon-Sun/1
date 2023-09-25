@@ -2,14 +2,14 @@ name: immortalwrt-x86-test
 
 on:
   schedule:
-    - cron: '0 17 * * 1' # 在中国时间每周一凌晨1点运行 (UTC时间是每周日下午5点)
+    - cron: '0 20 * * 1' # 在中国时间每周一凌晨1点运行 (UTC时间是每周日下午5点)
 
   workflow_dispatch:
     inputs:
       ssh:
         description: 'SSH connection to Actions'
-        required: false
-        default: 'false'
+        required: true
+        default: 'true'
 
 env:
   targets_targets: immortalwrt-x86
