@@ -1,0 +1,70 @@
+name: immortalwrt-N1-test
+
+on:
+  schedule:
+    - cron: '0 17 * * 1' # 在中国时间每周一凌晨1点运行 (UTC时间是每周日下午5点)
+
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
+
+env:
+  targets_targets: immortalwrt-N1
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: openwrt-23.05
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Clone source code
+      run: |
+        df -hT $PWD
+        mkdir openwrt
+
+    - name: Load custom configuration
+      run: |
+        cd openwrt
+        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
+        mv `pwd`/Route-config-Files/"$targets_targets"/* `pwd`/
+        mv `pwd`/Route-config-Files/upload.sh `pwd`/
+        cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
+        chmod +x diy.sh
+        ./diy.sh
+        mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
+
+    - name: SSH connection to Actions
+      uses: Saxon-Sun/ssh2actions@main
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    - name: Prepare artifact
+      if: env.PACKAGED_STATUS == 'success' && !cancelled()
+      run: |
+        cd openwrt/
+        mkdir -p ./artifact/firmware
+        mkdir -p ./artifact/package
+        ls /opt/openwrt_packit/output
+        rm -rf /opt/openwrt_packit/output/*.tar.gz
+        mv /opt/openwrt_packit/output/* ./artifact/firmware/
+        chmod +x `pwd`/upload.sh
+        `pwd`/upload.sh $targets_targets
+
+    - name: Delete workflow runs
+      uses: Mattraks/delete-workflow-runs@main
+      with:
+        token: ${{ secrets.pw }}
+        repository: ${{ github.repository }}
+        retain_days: 2
+        keep_minimum_runs: 2
