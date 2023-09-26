@@ -105,11 +105,10 @@ jobs:
         du -h --max-depth=1 ./ --exclude=build_dir --exclude=bin
         du -h --max-depth=1 ./build_dir
         du -h --max-depth=1 ./bin
-        rm -rf build_dir
-        df -h
-        rm -rf $(find ./bin/targets/ -type d -name "packages")
-        rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
         ls bin/targets/*/*
+        rm -rf build_dir
+        rm -rf $(find ./bin/targets/ -type d -name "packages")
+        df -h
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Package Armvirt as OpenWrt
@@ -129,7 +128,6 @@ jobs:
         mkdir -p ./artifact/package
         ls /opt/openwrt_packit/output
         rm -rf /opt/openwrt_packit/output/*.tar.gz
-        cp -rf $(find ./bin/targets/ -type f) ./artifact/firmware/
         mv /opt/openwrt_packit/output/* ./artifact/firmware/
         chmod +x `pwd`/upload.sh
         `pwd`/upload.sh $targets_targets
