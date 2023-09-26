@@ -127,7 +127,6 @@ jobs:
         mkdir -p ./artifact/firmware
         mkdir -p ./artifact/package
         ls /opt/openwrt_packit/output
-        rm -rf /opt/openwrt_packit/output/*.tar.gz
         mv /opt/openwrt_packit/output/* ./artifact/firmware/
         chmod +x `pwd`/upload.sh
         `pwd`/upload.sh $targets_targets
