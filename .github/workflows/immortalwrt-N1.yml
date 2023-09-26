@@ -125,6 +125,8 @@ jobs:
       if: env.PACKAGED_STATUS == 'success' && !cancelled()
       run: |
         cd openwrt/
+        mkdir -p ./artifact/firmware
+        mkdir -p ./artifact/package
         ls /opt/openwrt_packit/output
         rm -rf /opt/openwrt_packit/output/*.tar.gz
         cp -rf $(find ./bin/targets/ -type f) ./artifact/firmware/
