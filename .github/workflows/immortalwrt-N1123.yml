@@ -38,8 +38,6 @@ jobs:
         mv `pwd`/Route-config-Files/"$targets_targets"/* `pwd`/
         mv `pwd`/Route-config-Files/upload.sh `pwd`/
         cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/config/
-        chmod +x diy.sh
-        ./diy.sh
         mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
 
     - name: SSH connection to Actions
