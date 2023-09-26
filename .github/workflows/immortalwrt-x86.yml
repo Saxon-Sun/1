@@ -2,7 +2,7 @@ name: immortalwrt-x86
 
 on:
   schedule:
-    - cron: '0 17 * * 1' # 在中国时间每周一凌晨1点运行 (UTC时间是每周日下午5点)
+    - cron: '0 17 * * 6' # 在中国时间每周日凌晨1点运行 (UTC时间是每周六下午17点)
 
   workflow_dispatch:
     inputs:
