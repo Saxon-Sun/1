@@ -136,5 +136,5 @@ jobs:
       with:
         token: ${{ secrets.pw }}
         repository: ${{ github.repository }}
-        retain_days: 2
+        retain_days: 1
         keep_minimum_runs: 2
