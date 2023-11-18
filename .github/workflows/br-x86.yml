@@ -10,6 +10,7 @@ on:
         default: 'false'
 
 env:
+  targets_targets: br-x86
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
 
@@ -66,10 +67,11 @@ jobs:
       run: |
         cd openwrt
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
-        mv `pwd`/Route-config-Files/br-x86/* `pwd`/
+        mv `pwd`/Route-config-Files/"$targets_targets"/* `pwd`/
+        mv `pwd`/Route-config-Files/upload.sh `pwd`/
         chmod +x diy.sh
         ./diy.sh
-        mv `pwd`/Route-config-Files/br-x86/.config `pwd`/
+        mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
         make defconfig
 
     - name: SSH connection to Actions
@@ -89,18 +91,21 @@ jobs:
       id: compile
       run: |
         cd openwrt
-        make -j$(nproc) 2>&1|tee ./xxx.log|| make -j1 V=s 2>&1|tee ./xxx.log
+        make -j$(nproc) || make -j1 V=s
         echo "======================="
         echo "Space usage:"
         echo "======================="
         df -h
         echo "======================="
+        #make -j1 V=s
         du -h --max-depth=1 ./ --exclude=build_dir --exclude=bin
         du -h --max-depth=1 ./build_dir
         du -h --max-depth=1 ./bin
+        ls bin/targets/*/*
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
-        ls bin/targets/*/*
+        rm -rf build_dir
+        df -h
         echo "status=success" >> $GITHUB_OUTPUT
         
     - name: Upload firmware
@@ -108,12 +113,12 @@ jobs:
       run: |
         cd openwrt/
         chmod +x `pwd`/upload.sh
-        `pwd`/upload.sh
+        `pwd`/upload.sh $targets_targets
 
     - name: Delete workflow runs
-      uses: Mattraks/delete-workflow-runs@v2
+      uses: Mattraks/delete-workflow-runs@main
       with:
-        token: ${{ github.token }}
+        token: ${{ secrets.pw }}
         repository: ${{ github.repository }}
-        retain_days: 2
+        retain_days: 1
         keep_minimum_runs: 2
