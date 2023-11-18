@@ -53,7 +53,7 @@ jobs:
         cd openwrt
         # Add a feed source
         cat >> feeds.conf.default <<EOF
-        src-git helloworld https://github.com/fw876/helloworld
+        #src-git helloworld https://github.com/fw876/helloworld
         src-git kenzo https://github.com/kenzok8/openwrt-packages
         src-git small https://github.com/kenzok8/small
         EOF
