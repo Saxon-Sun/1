@@ -54,8 +54,8 @@ jobs:
     - name: Update feeds
       run: |
         cd openwrt
-        sudo -E apt-get -qq install subversion
-        svn co https://github.com/ophub/luci-app-amlogic/trunk/luci-app-amlogic ./package/luci-app-amlogic
+        rm -rf package/luci-app-amlogic
+        git clone https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
         # Add a feed source
         cat >> feeds.conf.default <<EOF
         # src-git kenzo https://github.com/kenzok8/openwrt-packages
