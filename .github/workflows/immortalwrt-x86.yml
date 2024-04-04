@@ -43,7 +43,7 @@ jobs:
       run: |
           sudo timedatectl set-timezone Asia/Shanghai
           sudo -E apt-mark hold grub-efi-amd64-signed
-          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.eu.org/init_build_environment.sh)'
+          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           df -h
 
     - name: Clone source code
