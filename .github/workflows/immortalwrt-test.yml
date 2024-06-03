@@ -66,9 +66,6 @@ jobs:
         cd openwrt
         git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         mv `pwd`/Route-config-Files/upload.sh `pwd`/
-        cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/
-        chmod +x diy.sh
-        ./diy.sh
         mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
         make defconfig
 
