@@ -11,7 +11,7 @@ on:
 env:
   targets_targets: immortalwrt-test
   REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: master
+  REPO_BRANCH: openwrt-23.05
 
 jobs:
 
@@ -51,12 +51,6 @@ jobs:
     - name: Update feeds
       run: |
         cd openwrt
-        # Add a feed source
-        cat >> feeds.conf.default <<EOF
-        # src-git kenzo https://github.com/kenzok8/openwrt-packages
-        # src-git small https://github.com/kenzok8/small
-        EOF
-        # Add a feed source
         cat ./feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
