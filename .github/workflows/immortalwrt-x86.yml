@@ -56,7 +56,9 @@ jobs:
     - name: Update feeds
       run: |
         cd openwrt
-        chmod +x Add-Source.sh
+        mv Route-config-Files/"$targets_targets"/* ./
+        chmod +x Route-config-Files/sh/*
+        mv Route-config-Files/sh/* ./
         ./Add-Source.sh
         ./scripts/feeds update -a
         ./scripts/feeds install -a
@@ -64,10 +66,7 @@ jobs:
     - name: Load custom configuration
       run: |
         cd openwrt
-        mv Route-config-Files/"$targets_targets"/* ./
-        mv Route-config-Files/upload.sh ./
         cp -r Route-config-Files/public/* files/etc/
-        chmod +x diy.sh
         ./diy.sh
         mv Route-config-Files/"$targets_targets"/.config ./
         make defconfig
