@@ -64,12 +64,12 @@ jobs:
     - name: Load custom configuration
       run: |
         cd openwrt
-        mv `pwd`/Route-config-Files/"$targets_targets"/* `pwd`/
-        mv `pwd`/Route-config-Files/upload.sh `pwd`/
-        cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/
+        mv Route-config-Files/"$targets_targets"/* ./
+        mv Route-config-Files/upload.sh ./
+        cp -r Route-config-Files/public/* files/etc/
         chmod +x diy.sh
         ./diy.sh
-        mv `pwd`/Route-config-Files/"$targets_targets"/.config `pwd`/
+        mv Route-config-Files/"$targets_targets"/.config ./
         make defconfig
 
     - name: SSH connection to Actions
