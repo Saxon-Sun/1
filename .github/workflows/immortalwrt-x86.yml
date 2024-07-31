@@ -50,24 +50,20 @@ jobs:
       run: |
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
+        cd openwrt
+        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         
     - name: Update feeds
       run: |
         cd openwrt
-        # Add a feed source
-        cat >> feeds.conf.default <<EOF
-        # src-git kenzo https://github.com/kenzok8/openwrt-packages
-        # src-git small https://github.com/kenzok8/small
-        EOF
-        # Add a feed source
-        cat ./feeds.conf.default
+        chmod +x Add-Source.sh
+        ./Add-Source.sh
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
     - name: Load custom configuration
       run: |
         cd openwrt
-        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         mv `pwd`/Route-config-Files/"$targets_targets"/* `pwd`/
         mv `pwd`/Route-config-Files/upload.sh `pwd`/
         cp -r `pwd`/Route-config-Files/public/* `pwd`/files/etc/
