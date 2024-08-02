@@ -73,7 +73,7 @@ jobs:
 
     - name: SSH connection to Actions
       uses: Saxon-Sun/ssh2actions@main
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      if: github.event.inputs.ssh == 'true'
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -116,8 +116,7 @@ jobs:
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt/
-        chmod +x `pwd`/upload.sh
-        `pwd`/upload.sh $targets_targets
+        ./upload.sh $targets_targets
 
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@main
