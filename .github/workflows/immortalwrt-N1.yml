@@ -28,7 +28,7 @@ jobs:
       with:
         # this might remove tools that are actually needed, but is enabled by
         # default
-        tool-cache: true
+        tool-cache: false
         # possible dangerous options since they delete whole directories that
         # are generally for third-party software or cache like /usr/local,
         # /opt, /var/cache, only use them if you know what you're doing
