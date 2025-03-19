@@ -24,15 +24,22 @@ jobs:
     steps:
 
     - name: Maximize build space
-      uses: jlumbroso/free-disk-space@main
+      uses: thiagokokada/free-disk-space@main
       with:
+        # this might remove tools that are actually needed, but is enabled by
+        # default
         tool-cache: true
-        android: true
-        dotnet: true
-        haskell: true
-        large-packages: true
-        docker-images: true
-        swap-storage: false
+        # possible dangerous options since they delete whole directories that
+        # are generally for third-party software or cache like /usr/local,
+        # /opt, /var/cache, only use them if you know what you're doing
+        usrmisc: true
+        usrlocal: true
+        opt: true
+        varcache: true
+        # this will run `du -h /* 2>/dev/null | sort -hr | head -n <N>` to show
+        # the top N directories by size, it is mostly used by development/debug
+        # and should not be used generally since it takes a while to calculate
+        debug: false
 
     - name: Checkout
       uses: actions/checkout@v3
