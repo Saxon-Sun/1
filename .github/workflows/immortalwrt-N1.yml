@@ -28,12 +28,12 @@ jobs:
       with:
         # this might remove tools that are actually needed, but is enabled by
         # default
-        tool-cache: false
+        tool-cache: true
         # possible dangerous options since they delete whole directories that
         # are generally for third-party software or cache like /usr/local,
         # /opt, /var/cache, only use them if you know what you're doing
         usrmisc: true
-        usrlocal: true
+        usrlocal: false
         opt: true
         varcache: true
         # this will run `du -h /* 2>/dev/null | sort -hr | head -n <N>` to show
