@@ -19,11 +19,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: debian:bookworm # 使用 Debian 12 镜像
 
     steps:
-
     - name: Maximize build space
       uses: thiagokokada/free-disk-space@main
       with:
@@ -34,27 +31,28 @@ jobs:
         varcache: false
         debug: false
 
-    - name: Checkout
-      uses: actions/checkout@v3
+    - name: Run in Debian container
+      container:
+        image: debian:bookworm
+      steps:
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: Install Compilation Dependencies
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        # 更新包列表并安装基本工具
-        apt-get update
-        apt-get install -y sudo curl git tzdata
-        # 设置时区为 Asia/Shanghai
-        ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-        dpkg-reconfigure -f noninteractive tzdata
-        # 防止 grub-efi-amd64-signed 包干扰（尽管容器中可能不需要）
-        apt-mark hold grub-efi-amd64-signed || true
-        # 运行 ImmortalWrt 的环境初始化脚本
-        bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-        df -h
+      - name: Install Compilation Dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y sudo curl git tzdata
+          ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+          dpkg-reconfigure -f noninteractive tzdata
+          apt-mark hold grub-efi-amd64-signed || true
+          bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          df -h
 
-    - name: Clone source code
-      run: |
+      # 以下步骤保持不变
+      - name: Clone source code
+        run: |
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         cd openwrt
