@@ -23,8 +23,8 @@ jobs:
 
     steps:
 
-    - name: Maximize build space
-      uses: jlumbroso/free-disk-space@main
+    - name: Free disk space
+      uses: coder-xiaomo/free-disk-space@main
       with:
         tool-cache: true
         android: true
@@ -32,7 +32,7 @@ jobs:
         haskell: true
         large-packages: true
         docker-images: true
-        swap-storage: false
+        swap-storage: true
 
     - name: Checkout
       uses: actions/checkout@v3
@@ -41,10 +41,9 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-          sudo timedatectl set-timezone Asia/Shanghai
-          sudo -E apt-mark hold grub-efi-amd64-signed
-          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-          df -h
+        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo timedatectl set-timezone Asia/Shanghai
+        df -h
 
     - name: Clone source code
       run: |
