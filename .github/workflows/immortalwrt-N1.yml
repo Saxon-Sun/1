@@ -2,28 +2,25 @@ name: immortalwrt-N1
 
 on:
   schedule:
-    - cron: '0 0 1 * *' # 在中国时间每月1号早上8点运行 (UTC时间是每月1号早上0点)
-
+    - cron: '0 0 1 * *'  # 每月1日 UTC 0:00 (中国时间 08:00)
   workflow_dispatch:
     inputs:
       ssh:
-        description: 'SSH connection to Actions'
+        description: 'Enable SSH connection to Actions'
         required: false
         default: 'false'
 
 env:
-  targets_targets: immortalwrt-N1
+  TARGET: immortalwrt-N1
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-24.10
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-
-    - name: Free disk space
+    - name: Maximize Build Space
       uses: coder-xiaomo/free-disk-space@main
       with:
         tool-cache: true
@@ -34,10 +31,10 @@ jobs:
         docker-images: true
         swap-storage: true
 
-    - name: Checkout
+    - name: Checkout Repository
       uses: actions/checkout@v3
 
-    - name: Install Compilation Dependencies
+    - name: Initialize Build Environment
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -45,46 +42,46 @@ jobs:
         sudo timedatectl set-timezone Asia/Shanghai
         df -h
 
-    - name: Clone source code
+    - name: Clone Source Code
       run: |
-        df -hT $PWD
-        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
         cd openwrt
-        git clone https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
+        git clone --depth 1 https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
+        df -hT $PWD
 
-    - name: Update feeds
+    - name: Configure Feeds
       run: |
         cd openwrt
         rm -rf package/luci-app-amlogic
-        git clone https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
-        mv Route-config-Files/"$targets_targets"/* ./
-        chmod +x Route-config-Files/diy/*
-        mv Route-config-Files/diy/* ./
+        git clone --depth 1 https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
+        cp -r Route-config-Files/$TARGET/* .
+        chmod +x Route-config-Files/diy/*.sh
+        mv Route-config-Files/diy/*.sh .
         ./Add-Source.sh
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    - name: Load custom configuration
+    - name: Apply Custom Configuration
       run: |
         cd openwrt
         cp -r Route-config-Files/public/* files/etc/
         ./diy-n1.sh
-        mv Route-config-Files/"$targets_targets"/.config ./
+        mv Route-config-Files/$TARGET/.config .
         make defconfig
 
-    - name: SSH connection to Actions
-      uses: Saxon-Sun/ssh2actions@main
+    - name: Enable SSH (Optional)
       if: github.event.inputs.ssh == 'true'
+      uses: Saxon-Sun/ssh2actions@main
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-    - name: Download package
+    - name: Download Dependencies
       id: package
       run: |
         cd openwrt
-        make download -j16
-        
+        make download -j$(nproc)
+
     - name: Compile the firmware
       id: compile
       run: |
@@ -114,18 +111,18 @@ jobs:
         PACKAGE_SOC: s905d
         WHOAMI: Saxon
 
-    - name: Prepare artifact
+    - name: Prepare Artifacts
       if: env.PACKAGED_STATUS == 'success' && !cancelled()
       run: |
-        cd openwrt/
-        mkdir -p ./artifact/firmware
-        mkdir -p ./artifact/package
-        ls /opt/openwrt_packit/output
-        mv /opt/openwrt_packit/output/* ./artifact/firmware/
-        rm -rf $(find ./artifact/firmware/ -type f -name "*rootfs*")
-        ./upload.sh $targets_targets
+        cd openwrt
+        mkdir -p artifact/firmware
+        mkdir -p artifact/package
+        ls -lh /opt/openwrt_packit/output
+        find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
+        find artifact/firmware/ -type f -name "*rootfs*" -exec rm -f {} \;
+        ./upload.sh $TARGET
 
-    - name: Delete workflow runs
+    - name: Cleanup Workflow Runs
       uses: Mattraks/delete-workflow-runs@main
       with:
         token: ${{ secrets.pw }}
