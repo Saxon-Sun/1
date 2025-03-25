@@ -11,7 +11,7 @@ on:
         default: 'false'
 
 env:
-  TARGET: immortalwrt-N1
+  TARGET_Name: immortalwrt-N1
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-24.10
 
@@ -54,7 +54,7 @@ jobs:
         cd openwrt
         rm -rf package/luci-app-amlogic
         git clone --depth 1 https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
-        cp -r Route-config-Files/$TARGET/* .
+        cp -r Route-config-Files/$TARGET_Name/* .
         chmod +x Route-config-Files/diy/*.sh
         mv Route-config-Files/diy/*.sh .
         ./Add-Source.sh
@@ -66,7 +66,7 @@ jobs:
         cd openwrt
         cp -r Route-config-Files/public/* files/etc/
         ./diy-n1.sh
-        mv Route-config-Files/$TARGET/.config .
+        mv Route-config-Files/$TARGET_Name/.config .
         make defconfig
 
     - name: Enable SSH (Optional)
@@ -80,7 +80,7 @@ jobs:
       id: package
       run: |
         cd openwrt
-        make download -j$(nproc)
+        make download -j16
 
     - name: Compile the firmware
       id: compile
@@ -120,7 +120,7 @@ jobs:
         ls -lh /opt/openwrt_packit/output
         find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
         find artifact/firmware/ -type f -name "*rootfs*" -exec rm -f {} \;
-        ./upload.sh $TARGET
+        ./upload.sh $TARGET_Name
 
     - name: Cleanup Workflow Runs
       uses: Mattraks/delete-workflow-runs@main
