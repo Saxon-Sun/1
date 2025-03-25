@@ -119,7 +119,7 @@ jobs:
         mkdir -p artifact/package
         ls -lh /opt/openwrt_packit/output
         find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
-        find artifact/firmware/ -type f -name "*rootfs*" -exec rm -f {} \;
+        find artifact/firmware/ -type f -not -name "*+o*" -exec rm -f {} \;
         ./upload.sh $TARGET_Name
 
     - name: Cleanup Workflow Runs
