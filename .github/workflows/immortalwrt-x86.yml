@@ -11,7 +11,7 @@ on:
         default: 'false'
 
 env:
-  TARGET: immortalwrt-x86
+  TARGET_Name: immortalwrt-x86
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-24.10
 
@@ -52,7 +52,7 @@ jobs:
     - name: Configure Feeds
       run: |
         cd openwrt
-        cp -r Route-config-Files/$TARGET/* .
+        cp -r Route-config-Files/$TARGET_Name/* .
         chmod +x Route-config-Files/diy/*.sh
         mv Route-config-Files/diy/*.sh .
         ./Add-Source.sh
@@ -64,7 +64,7 @@ jobs:
         cd openwrt
         cp -r Route-config-Files/public/* files/etc/
         ./diy-x86.sh
-        mv Route-config-Files/$TARGET/.config .
+        mv Route-config-Files/$TARGET_Name/.config .
         make defconfig
 
     - name: Enable SSH (Optional)
@@ -113,7 +113,7 @@ jobs:
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         cd openwrt
-        ./upload.sh $TARGET
+        ./upload.sh $TARGET_Name
 
     - name: Cleanup Workflow Runs
       uses: Mattraks/delete-workflow-runs@main
