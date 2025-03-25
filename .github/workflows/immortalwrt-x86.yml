@@ -77,7 +77,7 @@ jobs:
     - name: Download Dependencies
       run: |
         cd openwrt
-        make download -j16
+        make download -j$(nproc)
 
     - name: Compile the firmware
       id: compile
