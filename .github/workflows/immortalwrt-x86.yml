@@ -84,24 +84,28 @@ jobs:
       run: |
         cd openwrt
         if ! make -j$(nproc); then
-            echo "❌ 编译失败，正在分析磁盘使用情况..."
-            echo "📊 构建目录大小分析:"
+            echo "❌ 编译失败，正在分析磁盘占用情况..."
             
-            # 检查目录是否存在，避免错误信息
+            echo "📊 总体目录占用:"
             if [ -d "build_dir" ]; then
-                du -sh build_dir/* 2>/dev/null | sort -h | head -10
-            else
-                echo "build_dir 目录不存在"
+                du -sh build_dir/* 2>/dev/null | sort -hr | head -10
             fi
             
             echo ""
-            echo "📊 暂存目录大小分析:"
-            if [ -d "staging_dir" ]; then
-                du -sh staging_dir/* 2>/dev/null | sort -h | head -10
-            else
-                echo "staging_dir 目录不存在"
-            fi
+            echo "🔍 占用空间最大的包排名:"
             
+            # 分析所有包的空间占用（按大小排序）
+            if [ -d "build_dir/target-x86_64_musl" ]; then
+                echo "📦 包占用空间排名 TOP 15:"
+                find build_dir/target-x86_64_musl -maxdepth 2 -type d -exec du -sh {} \; 2>/dev/null | \
+                    sort -hr | head -15
+            fi
+        
+            echo ""
+            echo "💾 磁盘空间状态:"
+            df -h . | awk 'NR==2{print "可用空间: "$4"/"$2}'
+            echo "建议清理占用大的非必要包"
+        
             echo ""
             echo "🔍 重新以详细模式编译..."
             make -j1 V=s
