@@ -83,7 +83,29 @@ jobs:
       id: compile
       run: |
         cd openwrt
-        make -j$(nproc) || make -j1 V=s
+        if ! make -j$(nproc); then
+            echo "❌ 编译失败，正在分析磁盘使用情况..."
+            echo "📊 构建目录大小分析:"
+            
+            # 检查目录是否存在，避免错误信息
+            if [ -d "build_dir" ]; then
+                du -sh build_dir/* 2>/dev/null | sort -h | head -10
+            else
+                echo "build_dir 目录不存在"
+            fi
+            
+            echo ""
+            echo "📊 暂存目录大小分析:"
+            if [ -d "staging_dir" ]; then
+                du -sh staging_dir/* 2>/dev/null | sort -h | head -10
+            else
+                echo "staging_dir 目录不存在"
+            fi
+            
+            echo ""
+            echo "🔍 重新以详细模式编译..."
+            make -j1 V=s
+        fi
         echo "======================="
         echo "Space usage:"
         echo "======================="
