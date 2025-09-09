@@ -85,48 +85,28 @@ jobs:
       run: |
         cd openwrt
         if ! make -j$(nproc); then
-            echo "❌ 编译失败，开始详细分析..."
+            df -h
+            echo "❌ 编译失败，正在分析磁盘使用情况..."
+            echo "📊 构建目录大小分析:"
             
-            # 磁盘使用分析
-            echo "=== 磁盘使用分析 ==="
-            df -h .
-            echo ""
-            
-            # 构建目录分析
-            echo "=== 构建目录分析 ==="
+            # 检查目录是否存在，避免错误信息
             if [ -d "build_dir" ]; then
-                echo "总构建目录大小:"
-                du -sh build_dir || true
-                echo ""
-                
-                echo "各子目录大小:"
-                du -sh build_dir/* 2>/dev/null | sort -hr | head -10 || true
-                echo ""
-                
-                # 分析具体包的大小
-                echo "最大的包目录:"
-                for dir in target-x86_64_musl toolchain-x86_64_gcc-13.3.0_musl hostpkg host; do
-                    if [ -d "build_dir/$dir" ]; then
-                        echo "--- $dir ---"
-                        find "build_dir/$dir" -maxdepth 2 -type d -name "[!.]*" -exec du -sh {} \; 2>/dev/null | \
-                            sort -hr | head -5 || true
-                        echo ""
-                    fi
-                done
+                du -sh build_dir/* 2>/dev/null | sort -h | head -10
+            else
+                echo "build_dir 目录不存在"
             fi
             
-            # 查找编译错误
-            echo "=== 编译错误分析 ==="
-            find . -name "log*" -o -name "*.log" | head -5 | while read logfile; do
-                echo "检查日志文件: $logfile"
-                tail -20 "$logfile" 2>/dev/null | grep -i error || true
-            done
+            echo ""
+            echo "📊 暂存目录大小分析:"
+            if [ -d "staging_dir" ]; then
+                du -sh staging_dir/* 2>/dev/null | sort -h | head -10
+            else
+                echo "staging_dir 目录不存在"
+            fi
             
-            # 尝试获取最后错误
-            echo "最后的错误信息:"
-            make -j1 V=s 2>&1 | tail -50 | grep -i error | head -10 || true
-            
-            exit 1
+            echo ""
+            echo "🔍 重新以详细模式编译..."
+            make -j1 V=s
         fi
         echo "✅ 编译成功!"
         echo "======================="
