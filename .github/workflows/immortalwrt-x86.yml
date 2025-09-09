@@ -1,8 +1,9 @@
 name: immortalwrt-x86
 
 on:
-  schedule:
-    - cron: '0 0 1 * *'  # 每月1日 UTC 0:00 (中国时间 08:00)
+  # 注释掉以下定时触发部分
+  # schedule:
+  #   - cron: '0 0 1 * *'  # 每月1日 UTC 0:00 (中国时间 08:00)
   workflow_dispatch:
     inputs:
       ssh:
