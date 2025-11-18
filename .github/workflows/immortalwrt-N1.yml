@@ -65,7 +65,7 @@ jobs:
     - name: Apply Custom Configuration
       run: |
         cd openwrt
-        cp -r Route-config-Files/public/* files/etc/
+        cp -rf Route-config-Files/public/* files/
         ./diy-n1.sh
         mv Route-config-Files/$TARGET_Name/.config .
         make defconfig
