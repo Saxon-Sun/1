@@ -66,8 +66,8 @@ jobs:
       run: |
         cd openwrt
         cp -rf Route-config-Files/public/* files/
-        ./diy-n1.sh
         mv Route-config-Files/$TARGET_Name/.config .
+        ./diy.sh n1
         make defconfig
 
     - name: Enable SSH (Optional)
