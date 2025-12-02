@@ -64,7 +64,6 @@ jobs:
       run: |
         cd openwrt
         cp -rf Route-config-Files/public/* files/
-        mv Route-config-Files/$TARGET_Name/.config .
         ./diy.sh x86
         make defconfig
 
