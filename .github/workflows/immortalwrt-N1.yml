@@ -1,9 +1,6 @@
 name: immortalwrt-N1
 
 on:
-  # 注释掉以下定时触发部分
-  # schedule:
-  #   - cron: '0 0 1 * *'  # 每月1日 UTC 0:00 (中国时间 08:00)
   workflow_dispatch:
     inputs:
       ssh:
@@ -21,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+    
     - name: Maximize Build Space
       uses: coder-xiaomo/free-disk-space@main
       with:
@@ -32,8 +32,23 @@ jobs:
         docker-images: true
         swap-storage: true
 
-    - name: Checkout Repository
-      uses: actions/checkout@v5
+    - name: 创建模拟物理磁盘
+      run: |
+        mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+        root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+        sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+        sudo truncate -s "${root_size}"G /root.img
+        sudo losetup /dev/loop6 /mnt/mnt.img
+        sudo losetup /dev/loop7 /root.img
+        sudo pvcreate /dev/loop6
+        sudo pvcreate /dev/loop7
+        sudo vgcreate github /dev/loop6 /dev/loop7
+        sudo lvcreate -n runner -l 100%FREE github
+        sudo mkfs.xfs /dev/github/runner
+        sudo mkdir -p /github-builder
+        sudo mount /dev/github/runner /github-builder
+        sudo chown -R $USER:$GROUPS /github-builder
+        df -Th
 
     - name: Initialize Build Environment
       env:
@@ -44,8 +59,10 @@ jobs:
         df -h
 
     - name: Clone Source Code
+      working-directory: /github-builder
       run: |
         git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
+        ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
         git clone --depth 1 https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
         df -hT $PWD
