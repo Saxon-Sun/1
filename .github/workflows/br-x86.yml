@@ -10,7 +10,7 @@ on:
         default: 'false'
 
 env:
-  targets_targets: br-x86
+  TARGET_Name: br-x86
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-24.10
 
