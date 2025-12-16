@@ -16,7 +16,8 @@ on:
       ssh:
         description: '开启 SSH 连接 (调试用)'
         required: false
-        default: 'false'
+        type: boolean
+        default: false
 
 jobs:
   # =======================================================
