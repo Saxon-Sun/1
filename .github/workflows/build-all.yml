@@ -3,11 +3,16 @@ name: Build Selectable Firmware
 on:
   workflow_dispatch:
     inputs:
-      build_x86:
-        description: '编译 x86 固件'
-        required: true
+      build_x86_1:
+        description: '编译x86 - 93'
+        required: false
         type: boolean
         default: true
+      build_x86_2:
+        description: '编译 x86 - 1102' 
+        required: false
+        type: boolean
+        default: false
       build_n1:
         description: '编译 N1 固件'
         required: true
@@ -21,14 +26,59 @@ on:
 
 jobs:
   # =======================================================
+  # 任务 0: 初始化 x86 编译矩阵 (动态生成)
+  # =======================================================
+  init_x86:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.set-targets.outputs.targets }}
+      has_target: ${{ steps.set-targets.outputs.has_target }}
+    steps:
+      - id: set-targets
+        run: |
+          # 初始化 JSON 数组
+          JSON_LIST="["
+          HAS_TARGET="false"
+          
+          # 判断第一个复选框
+          if [ "${{ inputs.build_x86_1 }}" == "true" ]; then
+            JSON_LIST="$JSON_LIST \"immortalwrt-x86-93\","
+            HAS_TARGET="true"
+          fi
+          
+          # 判断第二个复选框
+          if [ "${{ inputs.build_x86_2 }}" == "true" ]; then
+            JSON_LIST="$JSON_LIST \"immortalwrt-x86-1102\"," 
+            HAS_TARGET="true"
+          fi
+          
+          # 去除末尾逗号并闭合数组
+          if [[ "$JSON_LIST" == *"," ]]; then
+            JSON_LIST="${JSON_LIST%?}"
+          fi
+          JSON_LIST="$JSON_LIST]"
+          
+          echo "targets=$JSON_LIST" >> $GITHUB_OUTPUT
+          echo "has_target=$HAS_TARGET" >> $GITHUB_OUTPUT
+          echo "生成的编译列表: $JSON_LIST"
+
+  # =======================================================
   # 任务 1: x86 固件
   # =======================================================
   build_x86:
-    name: Build x86 Firmware
-    if: github.event.inputs.build_x86 == 'true'
+    name: Build x86 - ${{ matrix.target }}
+    needs: init_x86
+    if: needs.init_x86.outputs.has_target == 'true'
     runs-on: ubuntu-latest
+    
+    # 核心：根据上一步生成的列表，自动分裂成多个任务
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.init_x86.outputs.targets) }}
+
     env:
-      TARGET_Name: immortalwrt-x86
+      TARGET_Name: ${{ matrix.target }}
       REPO_URL: https://github.com/immortalwrt/immortalwrt
       REPO_BRANCH: openwrt-24.10
     
