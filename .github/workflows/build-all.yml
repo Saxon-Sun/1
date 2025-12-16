@@ -22,7 +22,7 @@ on:
         description: '编译 N1 固件'
         required: true
         type: boolean
-        default: true
+        default: false
       ssh:
         description: '开启 SSH 连接 (调试用)'
         required: false
@@ -38,7 +38,6 @@ jobs:
     steps:
       - id: set-targets
         run: |
-          # 初始化 JSON 数组
           JSON_LIST="["
           HAS_TARGET="false"
           
@@ -56,7 +55,6 @@ jobs:
             HAS_TARGET="true"
           fi
           
-          # 去除末尾逗号并闭合数组
           if [[ "$JSON_LIST" == *"," ]]; then
             JSON_LIST="${JSON_LIST%?}"
           fi
