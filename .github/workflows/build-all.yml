@@ -1,0 +1,271 @@
+name: Build All Firmware (x86 & N1)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'Enable SSH connection to Actions'
+        required: false
+        default: 'false'
+
+jobs:
+  # =======================================================
+  # 任务 1: 编译 x86 固件
+  # =======================================================
+  build_x86:
+    name: Build x86 Firmware
+    runs-on: ubuntu-latest
+    env:
+      TARGET_Name: immortalwrt-x86
+      REPO_URL: https://github.com/immortalwrt/immortalwrt
+      REPO_BRANCH: openwrt-24.10
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+    
+    - name: Maximize Build Space
+      uses: coder-xiaomo/free-disk-space@main
+      with:
+        tool-cache: true
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
+
+    - name: 创建模拟物理磁盘
+      run: |
+        mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+        root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+        sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+        sudo truncate -s "${root_size}"G /root.img
+        sudo losetup /dev/loop6 /mnt/mnt.img
+        sudo losetup /dev/loop7 /root.img
+        sudo pvcreate /dev/loop6
+        sudo pvcreate /dev/loop7
+        sudo vgcreate github /dev/loop6 /dev/loop7
+        sudo lvcreate -n runner -l 100%FREE github
+        sudo mkfs.xfs /dev/github/runner
+        sudo mkdir -p /github-builder
+        sudo mount /dev/github/runner /github-builder
+        sudo chown -R $USER:$GROUPS /github-builder
+        df -Th
+
+    - name: Initialize Build Environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo timedatectl set-timezone Asia/Shanghai
+        df -h
+
+    - name: Clone Source Code
+      working-directory: /github-builder
+      run: |
+        git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
+        ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
+        cd openwrt
+        git clone --depth 1 https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
+        df -hT $PWD
+
+    - name: Configure Feeds
+      run: |
+        cd openwrt
+        cp -r Route-config-Files/$TARGET_Name/* .
+        chmod +x Route-config-Files/diy/*.sh
+        mv Route-config-Files/diy/*.sh .
+        ./Add-Source.sh
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Apply Custom Configuration
+      run: |
+        cd openwrt
+        cp -rf Route-config-Files/public/* files/
+        ./diy.sh x86
+        make defconfig
+
+    - name: Enable SSH (Optional)
+      if: github.event.inputs.ssh == 'true'
+      uses: Saxon-Sun/ssh2actions@main
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    - name: Download Dependencies
+      run: |
+        cd openwrt
+        make download -j$(nproc)
+
+    - name: Compile the firmware
+      id: compile
+      run: |
+        cd openwrt
+        if ! make -j$(nproc); then
+            df -h
+            echo "❌ 编译失败，正在分析磁盘使用情况..."
+            make -j1 V=s
+        fi
+        echo "✅ 编译成功!"
+        df -h
+        rm -rf $(find ./bin/targets/ -type d -name "packages")
+        rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
+        rm -rf build_dir
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Prepare Artifacts
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        cd openwrt
+        mkdir -p artifact/{firmware,package}
+        find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
+        find bin/packages/ -type f -name "*.ipk" -exec cp -f {} artifact/package/ \;
+
+    - name: Upload Firmware
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        cd openwrt
+        ./upload.sh $TARGET_Name
+
+  # =======================================================
+  # 任务 2: 编译 N1 固件 (与上面的 x86 任务并行运行)
+  # =======================================================
+  build_n1:
+    name: Build N1 Firmware
+    runs-on: ubuntu-latest
+    env:
+      TARGET_Name: immortalwrt-N1
+      REPO_URL: https://github.com/immortalwrt/immortalwrt
+      REPO_BRANCH: openwrt-24.10
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+    
+    - name: Maximize Build Space
+      uses: coder-xiaomo/free-disk-space@main
+      with:
+        tool-cache: true
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
+
+    - name: 创建模拟物理磁盘
+      run: |
+        mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+        root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+        sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+        sudo truncate -s "${root_size}"G /root.img
+        sudo losetup /dev/loop6 /mnt/mnt.img
+        sudo losetup /dev/loop7 /root.img
+        sudo pvcreate /dev/loop6
+        sudo pvcreate /dev/loop7
+        sudo vgcreate github /dev/loop6 /dev/loop7
+        sudo lvcreate -n runner -l 100%FREE github
+        sudo mkfs.xfs /dev/github/runner
+        sudo mkdir -p /github-builder
+        sudo mount /dev/github/runner /github-builder
+        sudo chown -R $USER:$GROUPS /github-builder
+        df -Th
+
+    - name: Initialize Build Environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo timedatectl set-timezone Asia/Shanghai
+        df -h
+
+    - name: Clone Source Code
+      working-directory: /github-builder
+      run: |
+        git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
+        ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
+        cd openwrt
+        git clone --depth 1 https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
+        df -hT $PWD
+
+    - name: Configure Feeds
+      run: |
+        cd openwrt
+        rm -rf package/luci-app-amlogic
+        git clone --depth 1 https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
+        cp -r Route-config-Files/$TARGET_Name/* .
+        chmod +x Route-config-Files/diy/*.sh
+        mv Route-config-Files/diy/*.sh .
+        ./Add-Source.sh
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Apply Custom Configuration
+      run: |
+        cd openwrt
+        cp -rf Route-config-Files/public/* files/
+        ./diy.sh n1
+        make defconfig
+
+    - name: Enable SSH (Optional)
+      if: github.event.inputs.ssh == 'true'
+      uses: Saxon-Sun/ssh2actions@main
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    - name: Download Dependencies
+      id: package
+      run: |
+        cd openwrt
+        make download -j$(nproc)
+
+    - name: Compile the firmware
+      id: compile
+      run: |
+        cd openwrt
+        make -j$(nproc) || make -j1 V=s
+        echo "======================="
+        echo "Space usage:"
+        df -h
+        echo "======================="
+        rm -rf build_dir
+        rm -rf $(find ./bin/targets/ -type d -name "packages")
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Package Armvirt as OpenWrt
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      uses: unifreq/openwrt_packit@master
+      env:
+        OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
+        PACKAGE_SOC: s905d
+        WHOAMI: Saxon
+
+    - name: Prepare Artifacts
+      if: env.PACKAGED_STATUS == 'success' && !cancelled()
+      run: |
+        cd openwrt
+        mkdir -p artifact/firmware
+        mkdir -p artifact/package
+        ls -lh /opt/openwrt_packit/output
+        find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
+        find artifact/firmware/ -type f -not -name "*+o*" -exec rm -f {} \;
+        ./upload.sh $TARGET_Name
+
+  # =======================================================
+  # 任务 3: 清理旧的 Workflow 记录 (最后运行)
+  # =======================================================
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: [build_x86, build_n1] # 等两个编译都结束后再清理
+    if: always()
+    steps:
+    - name: Cleanup Workflow Runs
+      uses: Mattraks/delete-workflow-runs@main
+      with:
+        token: ${{ secrets.pw }}
+        repository: ${{ github.repository }}
+        retain_days: 1
+        keep_minimum_runs: 2
