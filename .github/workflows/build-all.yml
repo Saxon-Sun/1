@@ -1,4 +1,4 @@
-name: Build Selectable Firmware
+name: Build immortalwrt Firmware
 
 on:
   workflow_dispatch:
@@ -10,6 +10,11 @@ on:
         default: true
       build_x86_2:
         description: '编译 x86 - 1102' 
+        required: false
+        type: boolean
+        default: false
+      build_x86_3:
+        description: '编译 x86 - br' 
         required: false
         type: boolean
         default: false
@@ -25,9 +30,6 @@ on:
         default: false
 
 jobs:
-  # =======================================================
-  # 任务 0: 初始化 x86 编译矩阵 (动态生成)
-  # =======================================================
   init_x86:
     runs-on: ubuntu-latest
     outputs:
@@ -40,15 +42,17 @@ jobs:
           JSON_LIST="["
           HAS_TARGET="false"
           
-          # 判断第一个复选框
           if [ "${{ inputs.build_x86_1 }}" == "true" ]; then
             JSON_LIST="$JSON_LIST \"immortalwrt-x86-93\","
             HAS_TARGET="true"
           fi
           
-          # 判断第二个复选框
           if [ "${{ inputs.build_x86_2 }}" == "true" ]; then
             JSON_LIST="$JSON_LIST \"immortalwrt-x86-1102\"," 
+            HAS_TARGET="true"
+          fi
+          if [ "${{ inputs.build_x86_3 }}" == "true" ]; then
+            JSON_LIST="$JSON_LIST \"br-x86\"," 
             HAS_TARGET="true"
           fi
           
@@ -71,7 +75,6 @@ jobs:
     if: needs.init_x86.outputs.has_target == 'true'
     runs-on: ubuntu-latest
     
-    # 核心：根据上一步生成的列表，自动分裂成多个任务
     strategy:
       fail-fast: false
       matrix:
