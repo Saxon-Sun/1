@@ -1,19 +1,30 @@
-name: Build All Firmware (x86 & N1)
+name: Build Selectable Firmware
 
 on:
   workflow_dispatch:
     inputs:
+      build_x86:
+        description: '编译 x86 固件'
+        required: true
+        type: boolean
+        default: true
+      build_n1:
+        description: '编译 N1 固件'
+        required: true
+        type: boolean
+        default: true
       ssh:
-        description: 'Enable SSH connection to Actions'
+        description: '开启 SSH 连接 (调试用)'
         required: false
         default: 'false'
 
 jobs:
   # =======================================================
-  # 任务 1: 编译 x86 固件
+  # 任务 1: x86 固件
   # =======================================================
   build_x86:
     name: Build x86 Firmware
+    if: github.event.inputs.build_x86 == 'true'
     runs-on: ubuntu-latest
     env:
       TARGET_Name: immortalwrt-x86
@@ -130,10 +141,11 @@ jobs:
         ./upload.sh $TARGET_Name
 
   # =======================================================
-  # 任务 2: 编译 N1 固件 (与上面的 x86 任务并行运行)
+  # 任务 2: N1 固件
   # =======================================================
   build_n1:
     name: Build N1 Firmware
+    if: github.event.inputs.build_n1 == 'true'
     runs-on: ubuntu-latest
     env:
       TARGET_Name: immortalwrt-N1
@@ -255,11 +267,11 @@ jobs:
         ./upload.sh $TARGET_Name
 
   # =======================================================
-  # 任务 3: 清理旧的 Workflow 记录 (最后运行)
+  # 任务 3: 清理
   # =======================================================
   cleanup:
     runs-on: ubuntu-latest
-    needs: [build_x86, build_n1] # 等两个编译都结束后再清理
+    needs: [build_x86, build_n1]
     if: always()
     steps:
     - name: Cleanup Workflow Runs
