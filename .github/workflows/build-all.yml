@@ -99,7 +99,6 @@ jobs:
 
     - name: 创建模拟物理磁盘 (LVM)
       run: |
-        # 你的 LVM 扩容逻辑保持不变，这对于大体积编译很有效
         mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
         root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
         sudo truncate -s "${mnt_size}"G /mnt/mnt.img
@@ -175,12 +174,15 @@ jobs:
       run: |
         echo "开始编译..."
         if ! make -j$(nproc); then
-            echo "❌ 多线程编译失败，尝试单线程并输出日志..."
+            echo "❌ 多线程编译失败，显示磁盘使用情况..."
+            df -h
+            echo "尝试单线程并输出日志..."
             make -j1 V=s
         fi
         echo "✅ 编译成功!"
+        echo "显示磁盘使用情况..."
+        df -h
         
-        # 清理不必要文件以减小 Artifact 体积
         rm -rf build_dir
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
@@ -194,7 +196,7 @@ jobs:
       if: steps.compile.outputs.status == 'success' && matrix.type == 'n1' && !cancelled()
       uses: unifreq/openwrt_packit@master
       env:
-        OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
+        OPENWRT_ARMVIRT: /github-builder/openwrt/bin/targets/*/*/*.tar.gz
         PACKAGE_SOC: s905d
         WHOAMI: Saxon
 
