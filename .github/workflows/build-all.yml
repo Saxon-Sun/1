@@ -182,11 +182,9 @@ jobs:
         echo "✅ 编译成功!"
         echo "显示磁盘使用情况..."
         df -h
-        pwd
         
         rm -rf build_dir
         rm -rf $(find ./bin/targets/ -type d -name "packages")
-        rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
         
         echo "status=success" >> $GITHUB_OUTPUT
 
