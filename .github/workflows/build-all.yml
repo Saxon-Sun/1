@@ -42,23 +42,15 @@ jobs:
       - id: set-matrix
         run: |
           TARGETS=()
-          if [ "${{ inputs.build_x86_1 }}" == "true" ]; then
-            TARGETS+=('{"target": "immortalwrt-x86-93", "type": "x86"}')
-          fi
-          if [ "${{ inputs.build_x86_2 }}" == "true" ]; then
-            TARGETS+=('{"target": "immortalwrt-x86-1102", "type": "x86"}')
-          fi
-          if [ "${{ inputs.build_x86_3 }}" == "true" ]; then
-            TARGETS+=('{"target": "br-x86", "type": "x86"}')
-          fi
-          if [ "${{ inputs.build_n1 }}" == "true" ]; then
-            TARGETS+=('{"target": "immortalwrt-N1", "type": "n1"}')
-          fi
+          [[ "${{ inputs.build_x86_1 }}" == "true" ]] && TARGETS+=('{"target": "immortalwrt-x86-93", "type": "x86"}')
+          [[ "${{ inputs.build_x86_2 }}" == "true" ]] && TARGETS+=('{"target": "immortalwrt-x86-1102", "type": "x86"}')
+          [[ "${{ inputs.build_x86_3 }}" == "true" ]] && TARGETS+=('{"target": "br-x86", "type": "x86"}')
+          [[ "${{ inputs.build_n1 }}" == "true" ]] && TARGETS+=('{"target": "immortalwrt-N1", "type": "n1"}')
+          
           if [ ${#TARGETS[@]} -eq 0 ]; then
              echo "has_target=false" >> $GITHUB_OUTPUT
              echo "⚠️ 未选择任何编译目标"
           else
-             # 使用 IFS 将数组用逗号连接
              JSON_STRING=$(IFS=,; echo "${TARGETS[*]}")
              echo "matrix={\"include\": [$JSON_STRING]}" >> $GITHUB_OUTPUT
              echo "has_target=true" >> $GITHUB_OUTPUT
@@ -136,14 +128,13 @@ jobs:
       run: |
         git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
-        cd openwrt
+        
+    - name: Configure Feeds & Apply Mods
+      working-directory: /github-builder/openwrt
+      run: |
         echo "正在导入私有配置..."
         cp -r $GITHUB_WORKSPACE/Route-config-Files .
         ls -R Route-config-Files | head -n 5
-        
-    - name: Configure Feeds
-      run: |
-        cd openwrt
         
         # [N1 特有步骤] 替换 amlogic 插件
         if [ "$BUILD_TYPE" == "n1" ]; then
@@ -160,8 +151,8 @@ jobs:
         ./scripts/feeds install -a
 
     - name: Apply Custom Configuration
+      working-directory: /github-builder/openwrt
       run: |
-        cd openwrt
         cp -rf Route-config-Files/public/* files/
         ./diy.sh $BUILD_TYPE
         make defconfig
@@ -174,14 +165,14 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
     - name: Download Dependencies
+      working-directory: /github-builder/openwrt
       run: |
-        cd openwrt
         make download -j$(nproc)
 
     - name: Compile Firmware
+      working-directory: /github-builder/openwrt
       id: compile
       run: |
-        cd openwrt
         echo "开始编译..."
         if ! make -j$(nproc); then
             echo "❌ 多线程编译失败，尝试单线程并输出日志..."
@@ -211,27 +202,26 @@ jobs:
     # 处理 Artifacts 和上传
     # ==========================================
     - name: Prepare Artifacts
+      working-directory: /github-builder/openwrt
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
-        mkdir -p artifact/firmware
-        mkdir -p artifact/package
+        mkdir -p artifact/{firmware,package}
         
         if [ "$BUILD_TYPE" == "n1" ]; then
           # N1 处理逻辑
+          ls -lh /opt/openwrt_packit/output
           find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
-          # 清理 N1 不需要的文件 (保留 img.gz 等)
           find artifact/firmware/ -type f -not -name "*+o*" -exec rm -f {} \;
         else
           # x86 处理逻辑
-          cd openwrt
-          find bin/targets/ -type f -exec cp -f {} ../artifact/firmware/ \;
-          find bin/packages/ -type f -name "*.ipk" -exec cp -f {} ../artifact/package/ \;
+          find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
+          find bin/packages/ -type f -name "*.ipk" -exec cp -f {} artifact/package/ \;
         fi
 
     - name: Upload Firmware via Script
+      working-directory: /github-builder/openwrt
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
-        cd openwrt
         ./upload.sh $TARGET_Name
 
   # =======================================================
