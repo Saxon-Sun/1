@@ -4,23 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       build_x86_1:
-        description: '编译x86 - 93'
+        description: '编译 x86 - 93'
         required: false
         type: boolean
         default: true
       build_x86_2:
-        description: '编译 x86 - 1102' 
+        description: '编译 x86 - 1102'
         required: false
         type: boolean
         default: false
       build_x86_3:
-        description: '编译 x86 - br' 
+        description: '编译 x86 - br'
         required: false
         type: boolean
         default: false
       build_n1:
         description: '编译 N1 固件'
-        required: true
+        required: false
         type: boolean
         default: false
       ssh:
@@ -30,63 +30,70 @@ on:
         default: false
 
 jobs:
-  init_x86:
+  # =======================================================
+  # 任务 1: 初始化矩阵
+  # =======================================================
+  init:
     runs-on: ubuntu-latest
     outputs:
-      targets: ${{ steps.set-targets.outputs.targets }}
-      has_target: ${{ steps.set-targets.outputs.has_target }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_target: ${{ steps.set-matrix.outputs.has_target }}
     steps:
-      - id: set-targets
+      - id: set-matrix
         run: |
-          JSON_LIST="["
-          HAS_TARGET="false"
-          
+          TARGETS=()
           if [ "${{ inputs.build_x86_1 }}" == "true" ]; then
-            JSON_LIST="$JSON_LIST \"immortalwrt-x86-93\","
-            HAS_TARGET="true"
+            TARGETS+=('{"target": "immortalwrt-x86-93", "type": "x86"}')
           fi
-          
           if [ "${{ inputs.build_x86_2 }}" == "true" ]; then
-            JSON_LIST="$JSON_LIST \"immortalwrt-x86-1102\"," 
-            HAS_TARGET="true"
+            TARGETS+=('{"target": "immortalwrt-x86-1102", "type": "x86"}')
           fi
           if [ "${{ inputs.build_x86_3 }}" == "true" ]; then
-            JSON_LIST="$JSON_LIST \"br-x86\"," 
-            HAS_TARGET="true"
+            TARGETS+=('{"target": "br-x86", "type": "x86"}')
           fi
-          
-          if [[ "$JSON_LIST" == *"," ]]; then
-            JSON_LIST="${JSON_LIST%?}"
+          if [ "${{ inputs.build_n1 }}" == "true" ]; then
+            TARGETS+=('{"target": "immortalwrt-N1", "type": "n1"}')
           fi
-          JSON_LIST="$JSON_LIST]"
-          
-          echo "targets=$JSON_LIST" >> $GITHUB_OUTPUT
-          echo "has_target=$HAS_TARGET" >> $GITHUB_OUTPUT
-          echo "生成的编译列表: $JSON_LIST"
+          if [ ${#TARGETS[@]} -eq 0 ]; then
+             echo "has_target=false" >> $GITHUB_OUTPUT
+             echo "⚠️ 未选择任何编译目标"
+          else
+             # 使用 IFS 将数组用逗号连接
+             JSON_STRING=$(IFS=,; echo "${TARGETS[*]}")
+             echo "matrix={\"include\": [$JSON_STRING]}" >> $GITHUB_OUTPUT
+             echo "has_target=true" >> $GITHUB_OUTPUT
+             echo "✅ 生成的编译矩阵: [$JSON_STRING]"
+          fi
 
   # =======================================================
-  # 任务 1: x86 固件
+  # 任务 2: 统一编译任务
   # =======================================================
-  build_x86:
-    name: Build x86 - ${{ matrix.target }}
-    needs: init_x86
-    if: needs.init_x86.outputs.has_target == 'true'
+  build:
+    name: Build - ${{ matrix.target }}
+    needs: init
+    if: needs.init.outputs.has_target == 'true'
     runs-on: ubuntu-latest
-    
     strategy:
       fail-fast: false
-      matrix:
-        target: ${{ fromJson(needs.init_x86.outputs.targets) }}
+      matrix: ${{ fromJson(needs.init.outputs.matrix) }}
 
     env:
       TARGET_Name: ${{ matrix.target }}
+      BUILD_TYPE: ${{ matrix.type }}
       REPO_URL: https://github.com/immortalwrt/immortalwrt
       REPO_BRANCH: openwrt-24.10
-    
+      TZ: Asia/Shanghai
+
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v5
     
+    - name: Checkout Private Config Repo
+      uses: actions/checkout@v5
+      with:
+        repository: Saxon-Sun/Route-config-Files
+        token: ${{ secrets.pw }}
+        path: Route-config-Files
+        fetch-depth: 1
+
     - name: Maximize Build Space
       uses: coder-xiaomo/free-disk-space@main
       with:
@@ -98,8 +105,9 @@ jobs:
         docker-images: true
         swap-storage: true
 
-    - name: 创建模拟物理磁盘
+    - name: 创建模拟物理磁盘 (LVM)
       run: |
+        # 你的 LVM 扩容逻辑保持不变，这对于大体积编译很有效
         mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
         root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
         sudo truncate -s "${mnt_size}"G /mnt/mnt.img
@@ -121,8 +129,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-        sudo timedatectl set-timezone Asia/Shanghai
-        df -h
+        sudo timedatectl set-timezone $TZ
 
     - name: Clone Source Code
       working-directory: /github-builder
@@ -130,12 +137,21 @@ jobs:
         git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
-        git clone --depth 1 https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
-        df -hT $PWD
-
+        echo "正在导入私有配置..."
+        cp -r $GITHUB_WORKSPACE/Route-config-Files .
+        ls -R Route-config-Files | head -n 5
+        
     - name: Configure Feeds
       run: |
         cd openwrt
+        
+        # [N1 特有步骤] 替换 amlogic 插件
+        if [ "$BUILD_TYPE" == "n1" ]; then
+          echo "检测到 N1 构建，处理 amlogic 插件..."
+          rm -rf package/luci-app-amlogic
+          git clone --depth 1 https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
+        fi
+        
         cp -r Route-config-Files/$TARGET_Name/* .
         chmod +x Route-config-Files/diy/*.sh
         mv Route-config-Files/diy/*.sh .
@@ -147,11 +163,11 @@ jobs:
       run: |
         cd openwrt
         cp -rf Route-config-Files/public/* files/
-        ./diy.sh x86
+        ./diy.sh $BUILD_TYPE
         make defconfig
 
     - name: Enable SSH (Optional)
-      if: github.event.inputs.ssh == 'true'
+      if: inputs.ssh == true
       uses: Saxon-Sun/ssh2actions@main
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -162,168 +178,68 @@ jobs:
         cd openwrt
         make download -j$(nproc)
 
-    - name: Compile the firmware
+    - name: Compile Firmware
       id: compile
       run: |
         cd openwrt
+        echo "开始编译..."
         if ! make -j$(nproc); then
-            df -h
-            echo "❌ 编译失败，正在分析磁盘使用情况..."
+            echo "❌ 多线程编译失败，尝试单线程并输出日志..."
             make -j1 V=s
         fi
         echo "✅ 编译成功!"
-        df -h
+        
+        # 清理不必要文件以减小 Artifact 体积
+        rm -rf build_dir
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         rm -rf $(find ./bin/targets/ -type f -name "*rootfs*")
-        rm -rf build_dir
+        
         echo "status=success" >> $GITHUB_OUTPUT
 
-    - name: Prepare Artifacts
-      if: steps.compile.outputs.status == 'success' && !cancelled()
-      run: |
-        cd openwrt
-        mkdir -p artifact/{firmware,package}
-        find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
-        find bin/packages/ -type f -name "*.ipk" -exec cp -f {} artifact/package/ \;
-
-    - name: Upload Firmware
-      if: steps.compile.outputs.status == 'success' && !cancelled()
-      run: |
-        cd openwrt
-        ./upload.sh $TARGET_Name
-
-  # =======================================================
-  # 任务 2: N1 固件
-  # =======================================================
-  build_n1:
-    name: Build N1 Firmware
-    if: github.event.inputs.build_n1 == 'true'
-    runs-on: ubuntu-latest
-    env:
-      TARGET_Name: immortalwrt-N1
-      REPO_URL: https://github.com/immortalwrt/immortalwrt
-      REPO_BRANCH: openwrt-24.10
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v5
-    
-    - name: Maximize Build Space
-      uses: coder-xiaomo/free-disk-space@main
-      with:
-        tool-cache: true
-        android: true
-        dotnet: true
-        haskell: true
-        large-packages: true
-        docker-images: true
-        swap-storage: true
-
-    - name: 创建模拟物理磁盘
-      run: |
-        mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
-        root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
-        sudo truncate -s "${mnt_size}"G /mnt/mnt.img
-        sudo truncate -s "${root_size}"G /root.img
-        sudo losetup /dev/loop6 /mnt/mnt.img
-        sudo losetup /dev/loop7 /root.img
-        sudo pvcreate /dev/loop6
-        sudo pvcreate /dev/loop7
-        sudo vgcreate github /dev/loop6 /dev/loop7
-        sudo lvcreate -n runner -l 100%FREE github
-        sudo mkfs.xfs /dev/github/runner
-        sudo mkdir -p /github-builder
-        sudo mount /dev/github/runner /github-builder
-        sudo chown -R $USER:$GROUPS /github-builder
-        df -Th
-
-    - name: Initialize Build Environment
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-        sudo timedatectl set-timezone Asia/Shanghai
-        df -h
-
-    - name: Clone Source Code
-      working-directory: /github-builder
-      run: |
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
-        ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
-        cd openwrt
-        git clone --depth 1 https://Saxon-Sun:${{ secrets.pw }}@github.com/Saxon-Sun/Route-config-Files.git
-        df -hT $PWD
-
-    - name: Configure Feeds
-      run: |
-        cd openwrt
-        rm -rf package/luci-app-amlogic
-        git clone --depth 1 https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
-        cp -r Route-config-Files/$TARGET_Name/* .
-        chmod +x Route-config-Files/diy/*.sh
-        mv Route-config-Files/diy/*.sh .
-        ./Add-Source.sh
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
-
-    - name: Apply Custom Configuration
-      run: |
-        cd openwrt
-        cp -rf Route-config-Files/public/* files/
-        ./diy.sh n1
-        make defconfig
-
-    - name: Enable SSH (Optional)
-      if: github.event.inputs.ssh == 'true'
-      uses: Saxon-Sun/ssh2actions@main
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-
-    - name: Download Dependencies
-      id: package
-      run: |
-        cd openwrt
-        make download -j$(nproc)
-
-    - name: Compile the firmware
-      id: compile
-      run: |
-        cd openwrt
-        make -j$(nproc) || make -j1 V=s
-        echo "======================="
-        echo "Space usage:"
-        df -h
-        echo "======================="
-        rm -rf build_dir
-        rm -rf $(find ./bin/targets/ -type d -name "packages")
-        echo "status=success" >> $GITHUB_OUTPUT
-
-    - name: Package Armvirt as OpenWrt
-      if: steps.compile.outputs.status == 'success' && !cancelled()
+    # ==========================================
+    # N1 特有步骤: 打包 Armvirt 为 OpenWrt
+    # ==========================================
+    - name: Package Armvirt as OpenWrt (N1 Only)
+      if: steps.compile.outputs.status == 'success' && matrix.type == 'n1' && !cancelled()
       uses: unifreq/openwrt_packit@master
       env:
         OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
         PACKAGE_SOC: s905d
         WHOAMI: Saxon
 
+    # ==========================================
+    # 处理 Artifacts 和上传
+    # ==========================================
     - name: Prepare Artifacts
-      if: env.PACKAGED_STATUS == 'success' && !cancelled()
+      if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
-        cd openwrt
         mkdir -p artifact/firmware
         mkdir -p artifact/package
-        ls -lh /opt/openwrt_packit/output
-        find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
-        find artifact/firmware/ -type f -not -name "*+o*" -exec rm -f {} \;
+        
+        if [ "$BUILD_TYPE" == "n1" ]; then
+          # N1 处理逻辑
+          find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
+          # 清理 N1 不需要的文件 (保留 img.gz 等)
+          find artifact/firmware/ -type f -not -name "*+o*" -exec rm -f {} \;
+        else
+          # x86 处理逻辑
+          cd openwrt
+          find bin/targets/ -type f -exec cp -f {} ../artifact/firmware/ \;
+          find bin/packages/ -type f -name "*.ipk" -exec cp -f {} ../artifact/package/ \;
+        fi
+
+    - name: Upload Firmware via Script
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        cd openwrt
         ./upload.sh $TARGET_Name
 
   # =======================================================
-  # 任务 3: 清理
+  # 任务 3: 清理历史记录
   # =======================================================
   cleanup:
     runs-on: ubuntu-latest
-    needs: [build_x86, build_n1]
+    needs: build
     if: always()
     steps:
     - name: Cleanup Workflow Runs
