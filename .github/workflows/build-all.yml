@@ -182,6 +182,7 @@ jobs:
         echo "✅ 编译成功!"
         echo "显示磁盘使用情况..."
         df -h
+        pwd
         
         rm -rf build_dir
         rm -rf $(find ./bin/targets/ -type d -name "packages")
@@ -196,7 +197,7 @@ jobs:
       if: steps.compile.outputs.status == 'success' && matrix.type == 'n1' && !cancelled()
       uses: unifreq/openwrt_packit@master
       env:
-        OPENWRT_ARMVIRT: /github-builder/openwrt/bin/targets/*/*/*.tar.gz
+        OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
         PACKAGE_SOC: s905d
         WHOAMI: Saxon
 
