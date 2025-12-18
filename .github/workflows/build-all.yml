@@ -146,9 +146,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: /github-builder/openwrt/.ccache
-        # Key 技巧: 包含 matrix.type 确保 x86 和 N1 不混用；包含 run_id 确保当前运行独占写入
         key: ${{ runner.os }}-ccache-${{ matrix.type }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
-        # Restore 技巧: 只要是同架构 (x86)，就尝试读取之前的缓存
         restore-keys: |
           ${{ runner.os }}-ccache-${{ matrix.type }}-${{ env.REPO_BRANCH }}-
           ${{ runner.os }}-ccache-${{ matrix.type }}-
