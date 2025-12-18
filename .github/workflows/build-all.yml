@@ -58,7 +58,7 @@ jobs:
           fi
 
   # =======================================================
-  # 任务 2: 统一编译任务
+  # 任务 2: 统一编译任务 (并行 + 缓存加速)
   # =======================================================
   build:
     name: Build - ${{ matrix.target }}
@@ -68,7 +68,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.init.outputs.matrix) }}
-
     env:
       TARGET_Name: ${{ matrix.target }}
       BUILD_TYPE: ${{ matrix.type }}
@@ -77,7 +76,6 @@ jobs:
       TZ: Asia/Shanghai
 
     steps:
-    
     - name: Checkout Private Config Repo
       uses: actions/checkout@v5
       with:
@@ -121,13 +119,40 @@ jobs:
       run: |
         sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
         sudo timedatectl set-timezone $TZ
+        # [新增] 确保安装 ccache 工具
+        sudo apt-get update && sudo apt-get install -y ccache
 
     - name: Clone Source Code
       working-directory: /github-builder
       run: |
         git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
-        
+
+    # =======================================================
+    # 缓存机制 1: OpenWrt DL (源码包) - 所有任务通用
+    # =======================================================
+    - name: Cache OpenWrt DL
+      uses: actions/cache@v4
+      with:
+        path: /github-builder/openwrt/dl
+        key: ${{ runner.os }}-openwrt-dl-${{ env.REPO_BRANCH }}-${{ hashFiles('Route-config-Files/diy/*.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-openwrt-dl-${{ env.REPO_BRANCH }}-
+    
+    # =======================================================
+    # 缓存机制 2: Ccache (编译产物) - 按架构通用
+    # =======================================================
+    - name: Cache Ccache
+      uses: actions/cache@v4
+      with:
+        path: /github-builder/openwrt/.ccache
+        # Key 技巧: 包含 matrix.type 确保 x86 和 N1 不混用；包含 run_id 确保当前运行独占写入
+        key: ${{ runner.os }}-ccache-${{ matrix.type }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
+        # Restore 技巧: 只要是同架构 (x86)，就尝试读取之前的缓存
+        restore-keys: |
+          ${{ runner.os }}-ccache-${{ matrix.type }}-${{ env.REPO_BRANCH }}-
+          ${{ runner.os }}-ccache-${{ matrix.type }}-
+
     - name: Configure Feeds & Apply Mods
       working-directory: /github-builder/openwrt
       run: |
@@ -154,6 +179,11 @@ jobs:
       run: |
         cp -rf Route-config-Files/public/* files/
         ./diy.sh $BUILD_TYPE
+        
+        # [新增] 强制开启 Ccache 配置
+        echo "CONFIG_CCACHE=y" >> .config
+        echo "CONFIG_CCACHE_DIR=\"/github-builder/openwrt/.ccache\"" >> .config
+        
         make defconfig
 
     - name: Enable SSH (Optional)
@@ -167,11 +197,19 @@ jobs:
       working-directory: /github-builder/openwrt
       run: |
         make download -j$(nproc)
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
 
     - name: Compile Firmware
       working-directory: /github-builder/openwrt
       id: compile
       run: |
+        # [新增] 初始化 Ccache 并限制大小为 2G
+        mkdir -p .ccache
+        ./staging_dir/host/bin/ccache -M 2G -F 0
+        echo "当前 Ccache 状态:"
+        ./staging_dir/host/bin/ccache -s
+        
         echo "开始编译..."
         if ! make -j$(nproc); then
             echo "❌ 多线程编译失败，显示磁盘使用情况..."
@@ -180,6 +218,11 @@ jobs:
             make -j1 V=s
         fi
         echo "✅ 编译成功!"
+        
+        # 显示 Ccache 命中统计
+        echo "编译后 Ccache 统计:"
+        ./staging_dir/host/bin/ccache -s
+        
         echo "显示磁盘使用情况..."
         df -h
         rm -rf build_dir
