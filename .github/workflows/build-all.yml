@@ -227,8 +227,8 @@ jobs:
         df -h
         rm -rf build_dir
         rm -rf $(find ./bin/targets/ -type d -name "packages")
-        ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/*
         find ./bin/targets/ -type f -name "*squashfs-rootfs*" -exec echo "🗑️  删除文件: {}" \; -delete
+        ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/*
         echo "status=success" >> $GITHUB_OUTPUT
 
     # ==========================================
