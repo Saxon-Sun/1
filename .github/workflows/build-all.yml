@@ -202,13 +202,15 @@ jobs:
       working-directory: /github-builder/openwrt
       id: compile
       run: |
-        # [新增] 初始化 Ccache 并限制大小为 2G
-        mkdir -p .ccache
+        # 1. 设置 Ccache 目录变量 (对应 .config 中的配置)
         export CCACHE_DIR=$(pwd)/.ccache
+        mkdir -p "$CCACHE_DIR"
+        
+        # 2. 初始化配置 (限制 2G)
         ccache -M 2G -F 0
-        echo "Ccache 配置完成，当前状态:"
+        echo "====== Ccache 初始状态 ======"
         ccache -s
-        # ============================
+        echo "============================="
         
         echo "开始编译..."
         if ! make -j$(nproc); then
@@ -217,11 +219,11 @@ jobs:
             echo "尝试单线程并输出日志..."
             make -j1 V=s
         fi
-        echo "✅ 编译成功!"
+        echo "✅ 编译流程结束"
         
-        # 显示 Ccache 命中统计
-        echo "编译后 Ccache 统计:"
-        ./staging_dir/host/bin/ccache -s
+        echo "====== 编译后 Ccache 统计 ======"
+        ccache -s
+        echo "================================"
         
         echo "显示磁盘使用情况..."
         df -h
@@ -229,7 +231,12 @@ jobs:
         rm -rf $(find ./bin/targets/ -type d -name "packages")
         find ./bin/targets/ -type f -name "*squashfs-rootfs*" -exec echo "🗑️  删除文件: {}" \; -delete
         ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/*
-        echo "status=success" >> $GITHUB_OUTPUT
+        
+        if [ -n "$(find bin/targets/ -name '*.tar.gz' -o -name '*.img*')" ]; then
+             echo "status=success" >> $GITHUB_OUTPUT
+        else
+             echo "⚠️ 未检测到固件产物，可能编译失败"
+        fi
 
     # ==========================================
     # N1 特有步骤: 打包 Armvirt 为 OpenWrt
