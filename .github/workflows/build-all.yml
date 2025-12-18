@@ -204,9 +204,11 @@ jobs:
       run: |
         # [新增] 初始化 Ccache 并限制大小为 2G
         mkdir -p .ccache
-        ./staging_dir/host/bin/ccache -M 2G -F 0
-        echo "当前 Ccache 状态:"
-        ./staging_dir/host/bin/ccache -s
+        export CCACHE_DIR=$(pwd)/.ccache
+        ccache -M 2G -F 0
+        echo "Ccache 配置完成，当前状态:"
+        ccache -s
+        # ============================
         
         echo "开始编译..."
         if ! make -j$(nproc); then
