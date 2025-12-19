@@ -179,8 +179,9 @@ jobs:
         ./diy.sh $BUILD_TYPE
         
         # [新增] 强制开启 Ccache 配置
+        echo "CONFIG_DEVEL=y" >> .config
         echo "CONFIG_CCACHE=y" >> .config
-        echo "CONFIG_CCACHE_DIR=\"/github-builder/openwrt/.ccache\"" >> .config
+        echo "CONFIG_CCACHE_DIR=\"/github-builder/openwrt/.ccache\"" >> .config  
         
         make defconfig
 
