@@ -129,18 +129,7 @@ jobs:
         ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
 
     # =======================================================
-    # 缓存机制 1: OpenWrt DL (源码包) - 所有任务通用
-    # =======================================================
-    - name: Cache OpenWrt DL
-      uses: actions/cache@v4
-      with:
-        path: /github-builder/openwrt/dl
-        key: ${{ runner.os }}-openwrt-dl-${{ env.REPO_BRANCH }}-${{ hashFiles('Route-config-Files/diy/*.sh') }}
-        restore-keys: |
-          ${{ runner.os }}-openwrt-dl-${{ env.REPO_BRANCH }}-
-    
-    # =======================================================
-    # 缓存机制 2: Ccache (编译产物) - 按架构通用
+    # 缓存机制 : Ccache (编译产物) - 按架构通用
     # =======================================================
     - name: Cache Ccache
       uses: actions/cache@v4
