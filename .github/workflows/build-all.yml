@@ -167,7 +167,6 @@ jobs:
         cp -rf Route-config-Files/public/* files/
         ./diy.sh $BUILD_TYPE
         
-        # [新增] 强制开启 Ccache 配置
         echo "CONFIG_DEVEL=y" >> .config
         echo "CONFIG_CCACHE=y" >> .config
         echo "CONFIG_CCACHE_DIR=\"/github-builder/openwrt/.ccache\"" >> .config  
@@ -192,11 +191,9 @@ jobs:
       working-directory: /github-builder/openwrt
       id: compile
       run: |
-        # 1. 设置 Ccache 目录变量 (对应 .config 中的配置)
         export CCACHE_DIR=$(pwd)/.ccache
         mkdir -p "$CCACHE_DIR"
         
-        # 2. 初始化配置 (限制 2G)
         ccache -M 2G -F 0
         echo "====== Ccache 初始状态 ======"
         ccache -s
