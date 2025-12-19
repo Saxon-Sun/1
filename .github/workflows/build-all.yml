@@ -31,7 +31,7 @@ on:
 
 jobs:
   # =======================================================
-  # 任务 1: 初始化矩阵
+  # 初始化矩阵
   # =======================================================
   init:
     runs-on: ubuntu-latest
@@ -58,13 +58,18 @@ jobs:
           fi
 
   # =======================================================
-  # 任务 2: 统一编译任务 (并行 + 缓存加速)
+  # 统一编译任务 (并行 + 缓存加速)
   # =======================================================
   build:
     name: Build - ${{ matrix.target }}
     needs: init
     if: needs.init.outputs.has_target == 'true'
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      actions: write
+    
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.init.outputs.matrix) }}
@@ -119,7 +124,6 @@ jobs:
       run: |
         sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
         sudo timedatectl set-timezone $TZ
-        # [新增] 确保安装 ccache 工具
         sudo apt-get update && sudo apt-get install -y ccache
 
     - name: Clone Source Code
@@ -131,8 +135,8 @@ jobs:
     # =======================================================
     # 缓存机制 : Ccache (编译产物) - 按架构通用
     # =======================================================
-    - name: Cache Ccache
-      uses: actions/cache@v4
+    - name: Restore Ccache
+      uses: actions/cache/restore@v4
       with:
         path: /github-builder/openwrt/.ccache
         key: ${{ runner.os }}-ccache-${{ matrix.type }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
@@ -261,9 +265,42 @@ jobs:
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         ./upload.sh $TARGET_Name
+        
+    - name: Delete Old Caches
+      if: steps.compile.outputs.status == 'success' && !cancelled() && (matrix.type == 'n1' || matrix.target == 'immortalwrt-x86-93')
+      uses: actions/github-script@v7
+      with:
+        script: |
+          console.log("🔍 [管理员模式] 正在清理同架构旧缓存...");
+          const key_prefix = "${{ runner.os }}-ccache-${{ matrix.type }}-${{ env.REPO_BRANCH }}-";
+          try {
+            const caches = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix,
+              ref: context.ref,
+            });
+            for (const cache of caches.data.actions_caches) {
+              console.log(`🗑️  删除旧缓存 ID: ${cache.id} Key: ${cache.key}`);
+              await github.rest.actions.deleteActionsCacheById({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                cache_id: cache.id,
+              });
+            }
+          } catch (error) {
+            console.log(`⚠️  清理失败: ${error.message}`);
+          }
 
+    - name: Save Ccache
+      if: steps.compile.outputs.status == 'success' && !cancelled() && (matrix.type == 'n1' || matrix.target == 'immortalwrt-x86-93')
+      uses: actions/cache/save@v4
+      with:
+        path: /github-builder/openwrt/.ccache
+        key: ${{ runner.os }}-ccache-${{ matrix.type }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
+        
   # =======================================================
-  # 任务 3: 清理历史记录
+  # 清理历史记录
   # =======================================================
   cleanup:
     runs-on: ubuntu-latest
