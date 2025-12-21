@@ -158,7 +158,6 @@ jobs:
           git clone --depth 1 https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
         fi
         
-        cp -r Route-config-Files/$TARGET_Name/* .
         chmod +x Route-config-Files/diy/*.sh
         mv Route-config-Files/diy/*.sh .
         ./Add-Source.sh
@@ -168,13 +167,7 @@ jobs:
     - name: Apply Custom Configuration
       working-directory: /github-builder/openwrt
       run: |
-        cp -rf Route-config-Files/public/* files/
         ./diy.sh $BUILD_TYPE
-        
-        echo "CONFIG_DEVEL=y" >> .config
-        echo "CONFIG_CCACHE=y" >> .config
-        echo "CONFIG_CCACHE_DIR=\"/github-builder/openwrt/.ccache\"" >> .config  
-        
         make defconfig
 
     - name: Enable SSH (Optional)
