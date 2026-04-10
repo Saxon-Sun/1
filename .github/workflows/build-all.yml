@@ -190,27 +190,39 @@ jobs:
         ./diy.sh $TARGET_Name
         make defconfig
 
-    - name: SSH Debugging (Telegram & Wait)
+    - name: Connect to Tailscale
+      if: inputs.ssh == true
+      uses: tailscale/github-action@v3
+      with:
+        oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+        tags: tag:ci
+        args: --ssh
+
+    - name: Send TG Notification and Wait
       if: inputs.ssh == true
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       run: |
-        sudo apt-get update && sudo apt-get install -y tmate
-        tmate -S /tmp/tmate.sock new-session -d
-        timeout 60s sh -c 'until [ -S /tmp/tmate.sock ]; do sleep 1; done'
-        tmate -S /tmp/tmate.sock wait-for-box
-        TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
-        MSG="🛠️ *调试环境已就绪* [${{ matrix.target }}]%0A%0ASSH 连接命令:%0A\`${TMATE_SSH}\`%0A%0A👉 调试完成后，直接在终端输入 \`exit\` 即可继续。"
+        # 获取 Tailscale 分配的内网 IP
+        TS_IP=$(tailscale ip -4)
+        
+        MSG="🛠️ *丝滑调试环境已就绪* [${{ matrix.target }}]%0A%0ASSH 命令:%0A\`ssh runner@${TS_IP}\`%0A%0A👉 调试完输入 \`touch /continue\` 即可继续。"
+        
+        # 发送 Telegram 通知
         curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
           -d "chat_id=${TELEGRAM_CHAT_ID}" \
           -d "text=${MSG}" \
           -d "parse_mode=Markdown"
-        echo "=== 消息已发送至 Telegram，等待调试... ==="
-        while tmate -S /tmp/tmate.sock has-session 2>/dev/null; do
-          sleep 5
-        done
-        echo "=== 终端已关闭，流程恢复执行 ==="
+        
+        echo "=== 请通过 Tailscale IP 直连终端，完全零延迟 ==="
+        echo "=== 调试完毕后，在终端执行: touch /continue ==="
+        
+        # 阻塞循环：检测文件
+        while [ ! -f /continue ]; do sleep 5; done
+        
+        echo "=== 检测到继续信号，恢复编译流程 ==="
 
     - name: Download Dependencies
       working-directory: /github-builder/openwrt
