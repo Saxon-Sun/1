@@ -201,6 +201,7 @@ jobs:
 
     - name: Send SSH Info Notification and Wait
       if: inputs.ssh == true
+      working-directory: /github-builder/openwrt
       run: |
         ./ssh_notify.sh "${{ matrix.target }}"
 
