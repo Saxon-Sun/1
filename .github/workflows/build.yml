@@ -108,6 +108,11 @@ jobs:
             echo "请确保 Target 名称包含 'x86' 或 'n1'。"
             exit 1
         fi
+    - name: Clone Source Code
+      working-directory: /github-builder
+      run: |
+        git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
+        ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
 
     - name: Configure Feeds & Apply Mods
       working-directory: /github-builder/openwrt
