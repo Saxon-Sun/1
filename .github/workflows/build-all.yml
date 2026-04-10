@@ -199,32 +199,10 @@ jobs:
         tags: tag:ci
         args: --ssh
 
-    - name: Send TG Notification and Wait
+    - name: Send SSH Info Notification and Wait
       if: inputs.ssh == true
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       run: |
-        TS_IP=$(tailscale ip -4)
-        
-        MSG="🛠️ *丝滑调试环境就绪* [${{ matrix.target }}]%0A%0ASSH 连接命令:%0A\`ssh runner@${TS_IP}\`%0A%0A👉 调试完成后，在终端执行:%0A\`sudo touch /continue\`"
-        
-        curl -s -o /dev/null -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-          -d "chat_id=${TELEGRAM_CHAT_ID}" \
-          -d "text=${MSG}" \
-          -d "parse_mode=Markdown"
-        
-        echo "-------------------------------------------------------"
-        echo "✅ 消息已发送至你的 Telegram！"
-        echo "🌐 Tailscale IP: ${TS_IP}"
-        echo "⌨️  调试指令: ssh runner@${TS_IP}"
-        echo "🚀 恢复流程指令: sudo touch /continue"
-        echo "-------------------------------------------------------"
-        
-        # 阻塞循环
-        while [ ! -f /continue ]; do sleep 5; done
-        
-        echo "🔔 [$(date +%T)] 检测到信号，正在恢复编译..."
+        ./ssh_notify.sh "${{ matrix.target }}"
 
     - name: Download Dependencies
       working-directory: /github-builder/openwrt
