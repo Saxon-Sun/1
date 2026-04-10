@@ -190,12 +190,20 @@ jobs:
         ./diy.sh $TARGET_Name
         make defconfig
 
-    - name: Enable SSH (Optional)
+    - name: Connect to Tailscale
       if: inputs.ssh == true
-      uses: Saxon-Sun/ssh2actions@main
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      uses: tailscale/github-action@v4
+      with:
+        oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+        tags: tag:ci
+        args: --ssh
+
+    - name: Send SSH Info Notification and Wait
+      if: inputs.ssh == true
+      working-directory: /github-builder/openwrt
+      run: |
+        ./ssh_notify.sh "${{ matrix.target }}"
 
     - name: Download Dependencies
       working-directory: /github-builder/openwrt
