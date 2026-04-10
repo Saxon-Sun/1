@@ -167,10 +167,13 @@ jobs:
         oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
         tags: tag:ci
         args: --ssh
-
+        
     - name: Send SSH Info Notification and Wait
       if: inputs.ssh == true
       working-directory: /github-builder/openwrt
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         ./ssh_notify.sh "${{ matrix.target }}" "$TELEGRAM_BOT_TOKEN" "$TELEGRAM_CHAT_ID"
 
