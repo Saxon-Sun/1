@@ -190,7 +190,7 @@ jobs:
         ./diy.sh $TARGET_Name
         make defconfig
 
-    - name: Enable SSH (Optional)
+    - name: SSH Debugging (Telegram & Wait)
       if: inputs.ssh == true
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -198,6 +198,9 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install -y tmate
         tmate -S /tmp/tmate.sock new-session -d
+        timeout 60s sh -c 'until [ -S /tmp/tmate.sock ]; do sleep 1; done'
+        tmate -S /tmp/tmate.sock wait-for-box
+        TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
         MSG="🛠️ *调试环境已就绪* [${{ matrix.target }}]%0A%0ASSH 连接命令:%0A\`${TMATE_SSH}\`%0A%0A👉 调试完成后，直接在终端输入 \`exit\` 即可继续。"
         curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
           -d "chat_id=${TELEGRAM_CHAT_ID}" \
@@ -205,7 +208,9 @@ jobs:
           -d "parse_mode=Markdown"
         echo "=== 消息已发送至 Telegram，等待调试... ==="
         while tmate -S /tmp/tmate.sock has-session 2>/dev/null; do
+          sleep 5
         done
+        echo "=== 终端已关闭，流程恢复执行 ==="
 
     - name: Download Dependencies
       working-directory: /github-builder/openwrt
