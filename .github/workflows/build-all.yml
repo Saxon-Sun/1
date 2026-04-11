@@ -29,7 +29,7 @@ on:
         type: boolean
         default: false
       pure_firmware:
-        description: '编译纯净固件 (不注入自定义配置和 public 文件)'
+        description: '编译纯净固件 (不注入配置和 public)'
         required: false
         type: boolean
         default: false
@@ -82,7 +82,7 @@ jobs:
     env:
       TARGET_Name: ${{ matrix.target }}
       REPO_URL: https://github.com/immortalwrt/immortalwrt
-      REPO_BRANCH: openwrt-24.10
+      REPO_BRANCH: openwrt-25.12
       TZ: Asia/Shanghai
 
     steps:
