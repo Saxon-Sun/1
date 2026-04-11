@@ -1,4 +1,4 @@
-name: Build immortalwrt Firmware
+name: Build immortalwrt Firmware 24.10
 
 on:
   workflow_dispatch:
