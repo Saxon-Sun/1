@@ -28,6 +28,12 @@ on:
         required: false
         type: boolean
         default: false
+      pure_firmware:
+        description: '编译纯净固件 (不注入自定义配置和 public 文件)'
+        required: false
+        type: boolean
+        default: false
+        
 
 jobs:
   # =======================================================
@@ -187,7 +193,7 @@ jobs:
     - name: Apply Custom Configuration
       working-directory: /github-builder/openwrt
       run: |
-        ./diy.sh $TARGET_Name
+        ./diy.sh $TARGET_Name ${{ inputs.pure_firmware }}
         make defconfig
 
     - name: Connect to Tailscale
