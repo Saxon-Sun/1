@@ -291,7 +291,7 @@ jobs:
       working-directory: /github-builder/openwrt
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
-        ./upload.sh $TARGET_Name
+        ./upload.sh $TARGET_Name ${{ inputs.pure_firmware }}
         
     - name: Delete Old Caches
       if: steps.compile.outputs.status == 'success' && !cancelled() && (env.BUILD_TYPE == 'n1' || matrix.target == 'immortalwrt-x86-93')
