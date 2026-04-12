@@ -3,17 +3,7 @@ name: Build immortalwrt Firmware
 on:
   workflow_dispatch:
     inputs:
-      branch_25_12:
-        description: 'openwrt-25.12'
-        required: false
-        type: boolean
-        default: true
-      branch_24_10:
-        description: 'openwrt-24.10'
-        required: false
-        type: boolean
-        default: false
-      # ----------------------
+
       build_x86_1:
         description: '编译 x86 - 93'
         required: false
@@ -41,6 +31,17 @@ on:
         default: false
       pure_firmware:
         description: '编译纯净固件 (不注入配置和 public)'
+        required: false
+        type: boolean
+        default: false
+      # ----------------------
+      branch_25_12:
+        description: 'openwrt-25.12'
+        required: false
+        type: boolean
+        default: true
+      branch_24_10:
+        description: 'openwrt-24.10'
         required: false
         type: boolean
         default: false
