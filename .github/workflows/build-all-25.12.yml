@@ -281,7 +281,6 @@ jobs:
           # N1 处理逻辑
           ls -lh /opt/openwrt_packit/output
           find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
-          find artifact/firmware/ -type f -not -name "*+o*" -exec rm -f {} \;
         else
           # x86 处理逻辑
           find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
