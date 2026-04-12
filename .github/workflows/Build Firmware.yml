@@ -199,13 +199,12 @@ jobs:
       run: |
         echo "正在导入私有配置..."
         cp -r $GITHUB_WORKSPACE/Route-config-Files .
-        ls -R Route-config-Files | head -n 5
-        chmod +x Route-config-Files/diy/*.sh
-        mv Route-config-Files/diy/*.sh .
-        
-        echo "正在更新并安装Feeds..."
+        ls -R Route-config-Files 2>/dev/null | head -n 5
+        chmod +x Route-config-Files/diy/*.sh && mv Route-config-Files/diy/*.sh .
         ./Add-Source.sh
-        ./scripts/feeds update -a
+        
+        echo "更新并安装Feeds..."
+        ./scripts/feeds update -a > /dev/null
         ./scripts/feeds install -a
         
         echo "正在应用自定义配置"
