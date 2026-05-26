@@ -111,7 +111,7 @@ jobs:
 
     steps:
     - name: Checkout Private Config Repo
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         repository: Saxon-Sun/Route-config-Files
         token: ${{ secrets.pw }}
@@ -186,7 +186,7 @@ jobs:
     # 缓存机制 : 使用 env.BUILD_TYPE 和 REPO_BRANCH 作为 Key
     # =======================================================
     - name: Restore Ccache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: /github-builder/openwrt/.ccache
         key: ${{ runner.os }}-ccache-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
@@ -213,7 +213,7 @@ jobs:
 
     - name: Connect to Tailscale
       if: inputs.ssh == true
-      uses: tailscale/github-action@v4
+      uses: tailscale/github-action@v4.1.2
       with:
         oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
@@ -310,7 +310,7 @@ jobs:
         
     - name: Delete Old Caches
       if: steps.compile.outputs.status == 'success' && !cancelled() && (env.BUILD_TYPE == 'n1' || matrix.target == 'immortalwrt-x86-93')
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         script: |
           const buildType = process.env.BUILD_TYPE;
@@ -339,7 +339,7 @@ jobs:
 
     - name: Save Ccache
       if: steps.compile.outputs.status == 'success' && !cancelled() && (env.BUILD_TYPE == 'n1' || matrix.target == 'immortalwrt-x86-93')
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: /github-builder/openwrt/.ccache
         key: ${{ runner.os }}-ccache-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
