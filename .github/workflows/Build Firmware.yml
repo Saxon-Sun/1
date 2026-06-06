@@ -24,6 +24,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_test:
+        description: '编译 临时 固件'
+        required: false
+        type: boolean
+        default: false
       ssh:
         description: '开启 SSH 连接 (调试用)'
         required: false
@@ -46,7 +51,6 @@ on:
         type: boolean
         default: false
         
-
 jobs:
   # =======================================================
   # 初始化矩阵
@@ -64,6 +68,7 @@ jobs:
           [[ "${{ inputs.build_x86_2 }}" == "true" ]] && TARGETS+=("immortalwrt-x86-1102")
           [[ "${{ inputs.build_x86_3 }}" == "true" ]] && TARGETS+=("br-x86")
           [[ "${{ inputs.build_n1 }}" == "true" ]] && TARGETS+=("immortalwrt-N1")
+          [[ "${{ inputs.build_test }}" == "true" ]] && TARGETS+=("immortalwrt-test")
           
           BRANCHES=()
           [[ "${{ inputs.branch_25_12 }}" == "true" ]] && BRANCHES+=("openwrt-25.12")
@@ -133,9 +138,12 @@ jobs:
         elif [[ "$TARGET_LOWER" == *"x86"* ]]; then
             echo "BUILD_TYPE=x86" >> $GITHUB_ENV
             echo "✅ 识别为 x86 架构"
+        elif [[ "$TARGET_LOWER" == *"test"* ]]; then
+            echo "BUILD_TYPE=test" >> $GITHUB_ENV
+            echo "✅ 识别为 Test 临时编译固件"
         else
             echo "❌ 致命错误：无法从 '$TARGET_Name' 中识别架构！"
-            echo "请确保 Target 名称包含 'x86' 或 'n1'。"
+            echo "请确保 Target 名称包含 'x86', 'n1' 或 'test'。"
             exit 1
         fi
 
@@ -297,7 +305,7 @@ jobs:
           ls -lh /opt/openwrt_packit/output
           find /opt/openwrt_packit/output -type f -exec cp -f {} artifact/firmware/ \;
         else
-          # x86 处理逻辑
+          # x86 处理逻辑及兜底逻辑
           find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
           find bin/packages/ -type f -name "*.ipk" -exec cp -f {} artifact/package/ \;
         fi
@@ -309,7 +317,7 @@ jobs:
         ./upload.sh $TARGET_Name ${{ inputs.pure_firmware }}
         
     - name: Delete Old Caches
-      if: steps.compile.outputs.status == 'success' && !cancelled() && (env.BUILD_TYPE == 'n1' || matrix.target == 'immortalwrt-x86-93')
+      if: steps.compile.outputs.status == 'success' && !cancelled() && (env.BUILD_TYPE == 'n1' || env.BUILD_TYPE == 'test' || matrix.target == 'immortalwrt-x86-93')
       uses: actions/github-script@v9
       with:
         script: |
@@ -338,7 +346,7 @@ jobs:
           }
 
     - name: Save Ccache
-      if: steps.compile.outputs.status == 'success' && !cancelled() && (env.BUILD_TYPE == 'n1' || matrix.target == 'immortalwrt-x86-93')
+      if: steps.compile.outputs.status == 'success' && !cancelled() && (env.BUILD_TYPE == 'n1' || env.BUILD_TYPE == 'test' || matrix.target == 'immortalwrt-x86-93')
       uses: actions/cache/save@v5
       with:
         path: /github-builder/openwrt/.ccache
