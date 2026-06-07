@@ -40,7 +40,7 @@ on:
         default: false
 
       build_branches:
-        description: '分支 (支持输入多个，如: openwrt-25.12,openwrt-24.10)'
+        description: '分支 (如: openwrt-25.12,openwrt-24.10)'
         required: true
         type: string
         default: 'openwrt-25.12'
