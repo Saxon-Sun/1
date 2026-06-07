@@ -273,7 +273,7 @@ jobs:
         find ./bin/targets/ -type f -name "*squashfs-rootfs*" -exec echo "🗑️  删除文件: {}" \; -delete
         ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/*
         
-        if [ -n "$(find bin/targets/ -name '*.tar.gz' -o -name '*.img*')" ]; then
+        if [ -n "$(find bin/targets/ -name '*.tar.gz' -o -name '*.img*' -o -name '*.bin')" ]; then
              echo "status=success" >> $GITHUB_OUTPUT
         else
              echo "⚠️ 未检测到固件产物，可能编译失败"
