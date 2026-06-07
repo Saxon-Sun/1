@@ -40,6 +40,10 @@ on:
         type: boolean
         default: false
       # ----------------------
+        description: '手动输入分支名称 (如无需手动输入请留空)'
+        required: false
+        type: string
+        default: ''
       branch_25_12:
         description: 'openwrt-25.12'
         required: false
@@ -73,6 +77,11 @@ jobs:
           BRANCHES=()
           [[ "${{ inputs.branch_25_12 }}" == "true" ]] && BRANCHES+=("openwrt-25.12")
           [[ "${{ inputs.branch_24_10 }}" == "true" ]] && BRANCHES+=("openwrt-24.10")
+          
+          CUSTOM_BRANCH="${{ inputs.custom_branch }}"
+          if [ -n "$CUSTOM_BRANCH" ]; then
+            BRANCHES+=("$CUSTOM_BRANCH")
+          fi
           
           if [ ${#TARGETS[@]} -eq 0 ] || [ ${#BRANCHES[@]} -eq 0 ]; then
              echo "has_target=false" >> $GITHUB_OUTPUT
