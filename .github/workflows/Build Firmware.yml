@@ -272,6 +272,33 @@ jobs:
         else
              echo "⚠️ 未检测到固件产物，可能编译失败"
         fi
+            
+    - name: Top 20 Largest Compiled Packages
+      working-directory: /github-builder/openwrt
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        echo "📦 统计体积最大的前 20 个软件包 (以解压安装体积为准)"
+        
+        # 遍历所有 apk 包，提取标准的 size 字段
+        find bin/packages/ -type f -name "*.apk" | while read -r apk; do
+            size=$(tar -xOf "$apk" .PKGINFO 2>/dev/null | grep -E '^size\s*=' | awk -F'=' '{print $2}' | tr -d ' ')
+            name=$(basename "$apk")
+            
+            if [[ -n "$size" && "$size" =~ ^[0-9]+$ ]]; then
+                echo -e "${size}\t${name}"
+            fi
+        done |
+        sort -nr | # 按数字大小倒序排序
+        head -n 20 | # 只取前 20 名
+        awk '{
+            size=$1;
+            if(size >= 1024*1024)
+                printf "%8.2f MB  %s\n", size/1024/1024, $2;
+            else if(size >= 1024)
+                printf "%8.2f KB  %s\n", size/1024, $2;
+            else
+                printf "%8.2f B   %s\n", size, $2;
+        }'
 
     # ==========================================
     # N1 特有步骤: 打包 Armvirt 为 OpenWrt
