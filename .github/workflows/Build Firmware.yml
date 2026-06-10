@@ -280,11 +280,10 @@ jobs:
       if: steps.compile.outputs.status == 'success' && env.BUILD_TYPE == 'n1' && !cancelled()
       uses: unifreq/openwrt_packit@master
       env:
-        OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
+        OPENWRT_ARMSR: openwrt/bin/targets/*/*/*generic-rootfs.tar.gz
         PACKAGE_SOC: s905d
         KERNEL_VERSION_NAME: 6.12.y
         WHOAMI: Saxon
-        OP_ROOT_TGZ: immortalwrt-armsr-armv8-generic-rootfs.tar.gz
 
     # ==========================================
     # 处理 Artifacts 和上传
