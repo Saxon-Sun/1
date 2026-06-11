@@ -267,17 +267,20 @@ jobs:
         if [ -d "bin/" ]; then
             find bin/ -type f \( -name "*.apk" -o -name "*.ipk" \) -exec du -b {} + 2>/dev/null | \
             sort -nr | \
-            head -n 20 | \
-            awk '{
+            awk '
+            BEGIN { count = 0 }
+            {
+                if (count >= 20) exit;
+                count++;
                 size=$1;
                 name=$2;
                 sub(/.*\//, "", name);
                 if(size >= 1024*1024)
-                    printf "%8.2f MB  %s\n", size/1024/1024, name;
+                    printf "[%02d] %8.2f MB  %s\n", count, size/1024/1024, name;
                 else if(size >= 1024)
-                    printf "%8.2f KB  %s\n", size/1024, name;
+                    printf "[%02d] %8.2f KB  %s\n", count, size/1024, name;
                 else
-                    printf "%8.2f B   %s\n", size, name;
+                    printf "[%02d] %8.2f B   %s\n", count, size, name;
             }'
         else
             echo "⚠️ 未找到 bin 目录，跳过体积统计"
