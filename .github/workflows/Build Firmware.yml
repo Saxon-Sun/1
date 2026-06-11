@@ -262,43 +262,38 @@ jobs:
         
         echo "显示磁盘使用情况..."
         df -h
+
+        echo "📦 统计体积最大的前 20 个软件包 (按实际文件大小排序)"
+        if [ -d "bin/" ]; then
+            find bin/ -type f \( -name "*.apk" -o -name "*.ipk" \) -exec du -b {} + 2>/dev/null | \
+            sort -nr | \
+            head -n 20 | \
+            awk '{
+                size=$1;
+                name=$2;
+                sub(/.*\//, "", name);
+                if(size >= 1024*1024)
+                    printf "%8.2f MB  %s\n", size/1024/1024, name;
+                else if(size >= 1024)
+                    printf "%8.2f KB  %s\n", size/1024, name;
+                else
+                    printf "%8.2f B   %s\n", size, name;
+            }'
+        else
+            echo "⚠️ 未找到 bin 目录，跳过体积统计"
+        fi
+
+        echo "开始清理临时文件与冗余组件..."
         rm -rf build_dir
-        rm -rf $(find ./bin/targets/ -type d -name "packages")
+        rm -rf $(find ./bin/targets/ -type d -name "packages") 2>/dev/null || true
         find ./bin/targets/ -type f -name "*squashfs-rootfs*" -exec echo "🗑️  删除文件: {}" \; -delete
-        ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/*
+        ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/* 2>/dev/null || true
         
-        if [ -n "$(find bin/targets/ -name '*.tar.gz' -o -name '*.img*' -o -name '*.bin')" ]; then
+        if [ -n "$(find bin/targets/ -name '*.tar.gz' -o -name '*.img*' -o -name '*.bin' 2>/dev/null)" ]; then
              echo "status=success" >> $GITHUB_OUTPUT
         else
              echo "⚠️ 未检测到固件产物，可能编译失败"
         fi
-            
-    - name: Top 20 Largest Compiled Packages
-      working-directory: /github-builder/openwrt
-      if: steps.compile.outputs.status == 'success' && !cancelled()
-      run: |
-        echo "📦 统计体积最大的前 20 个软件包 (以解压安装体积为准)"
-        
-        # 遍历所有 apk 包，提取标准的 size 字段
-        find bin/packages/ -type f -name "*.apk" | while read -r apk; do
-            size=$(tar -xOf "$apk" .PKGINFO 2>/dev/null | grep -E '^size\s*=' | awk -F'=' '{print $2}' | tr -d ' ')
-            name=$(basename "$apk")
-            
-            if [[ -n "$size" && "$size" =~ ^[0-9]+$ ]]; then
-                echo -e "${size}\t${name}"
-            fi
-        done |
-        sort -nr | # 按数字大小倒序排序
-        head -n 20 | # 只取前 20 名
-        awk '{
-            size=$1;
-            if(size >= 1024*1024)
-                printf "%8.2f MB  %s\n", size/1024/1024, $2;
-            else if(size >= 1024)
-                printf "%8.2f KB  %s\n", size/1024, $2;
-            else
-                printf "%8.2f B   %s\n", size, $2;
-        }'
 
     # ==========================================
     # N1 特有步骤: 打包 Armvirt 为 OpenWrt
@@ -328,7 +323,7 @@ jobs:
         else
           # x86 处理逻辑及兜底逻辑
           find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
-          find bin/packages/ -type f -name "*.ipk" -exec cp -f {} artifact/package/ \;
+          find bin/packages/ -type f \( -name "*.ipk" -o -name "*.apk" \) -exec cp -f {} artifact/package/ \;
         fi
 
     - name: Upload Firmware via Script
