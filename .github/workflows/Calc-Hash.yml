@@ -16,52 +16,45 @@ jobs:
   calc-hash:
     runs-on: ubuntu-latest
     steps:
-      - name: 安装打包依赖
-        run: sudo apt-get update && sudo apt-get install -y zstd git
+      - name: 安装依赖并获取 OpenWrt 官方克隆脚本
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd git curl
+          # 直接拉取 OpenWrt 官方源码库里的 git-clone.sh 脚本
+          curl -sL https://raw.githubusercontent.com/openwrt/openwrt/master/scripts/git-clone.sh -o git-clone.sh
+          chmod +x git-clone.sh
 
-      - name: 自动解析并按 OpenWrt 标准打包计算
+      - name: 调用 OpenWrt 官方逻辑打包并计算
         run: |
           REPO_URL="${{ github.event.inputs.repo_url }}"
           INPUT_COMMIT="${{ github.event.inputs.commit }}"
           [ -z "$INPUT_COMMIT" ] && INPUT_COMMIT="HEAD"
 
-          # 1. 解析包名
           REPO_NAME=$(basename "$REPO_URL" .git)
 
-          # 2. 克隆仓库并切换目标
-          git clone "$REPO_URL" target_repo
-          cd target_repo
+          # 1. 临时获取 Commit 信息与提交日期
+          git clone "$REPO_URL" temp_repo
+          cd temp_repo
           git checkout "$INPUT_COMMIT"
-
-          # 3. 解析完整的 40 位 SHA 和 7 位短 SHA
           FULL_COMMIT=$(git rev-parse HEAD)
           SHORT_COMMIT=$(echo "$FULL_COMMIT" | cut -c1-7)
-
-          # 4. 提取精确提交日期与 Unix 秒级时间戳
           SOURCE_DATE=$(git log -1 --format="%cd" --date=format:"%Y-%m-%d")
-          COMMIT_EPOCH=$(git log -1 --format="%at")
-          DATE_DOT=$(echo "$SOURCE_DATE" | tr '-' '.')
+          cd .. && rm -rf temp_repo
 
-          # 5. 组装标准目录名与文件名
+          # 2. 拼接标准文件名与目录名
+          DATE_DOT=$(echo "$SOURCE_DATE" | tr '-' '.')
           SUBDIR="${REPO_NAME}-${DATE_DOT}~${SHORT_COMMIT}"
           FILE="${SUBDIR}.tar.zst"
 
-          # 6. 清理 git 元数据
-          cd ..
-          mv target_repo "$SUBDIR"
-          rm -rf "$SUBDIR/.git"
+          # 3. 创建 dl 目录，并调用 OpenWrt 官方 git-clone.sh 进行打包
+          mkdir -p dl
+          ./git-clone.sh dl "$FILE" "$REPO_URL" "$FULL_COMMIT" "$SUBDIR"
 
-          # 7. 严格按照 OpenWrt 原生规则打包
-          tar --sort=name \
-              --mtime="@$COMMIT_EPOCH" \
-              --owner=0 --group=0 --numeric-owner \
-              -cf - "$SUBDIR" | zstd -19 > "$FILE"
+          # 4. 计算 SHA256 哈希
+          HASH=$(sha256sum "dl/$FILE" | awk '{print $1}')
 
-          # 8. 计算 SHA256
-          HASH=$(sha256sum "$FILE" | awk '{print $1}')
-
-          # 9. 输出结果
-          echo "## 🚀 计算完成 (已严格匹配 OpenWrt 标准)" >> $GITHUB_STEP_SUMMARY
+          # 5. 输出结果到 Summary
+          echo "## 🚀 官方原生打包完成" >> $GITHUB_STEP_SUMMARY
           echo "目标仓库: \`$REPO_URL\`" >> $GITHUB_STEP_SUMMARY
           echo "生成文件: \`$FILE\`" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
