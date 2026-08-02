@@ -1,4 +1,4 @@
-name: OpenWrt 包 Hash 通用计算器
+name: OpenWrt Git 包 Hash 通用计算器
 
 on:
   workflow_dispatch:
@@ -8,66 +8,132 @@ on:
         required: true
         default: ''
       commit:
-        description: 'Commit SHA / 分支名 / Tag名 (留空默认拉取最新 HEAD)'
+        description: 'Commit SHA / 分支名 / Tag名 (留空默认最新 HEAD)'
         required: false
         default: ''
 
 jobs:
   calc-hash:
     runs-on: ubuntu-latest
-    steps:
-      - name: 安装打包依赖
-        run: sudo apt-get update && sudo apt-get install -y zstd git
 
-      - name: 自动解析并按 OpenWrt 标准打包计算
+    steps:
+      - name: 安装依赖
         run: |
+          sudo apt-get update
+          sudo apt-get install -y git zstd
+
+      - name: 使用 OpenWrt 标准方式计算 MIRROR_HASH
+        shell: bash
+        run: |
+
+          set -e
+
           REPO_URL="${{ github.event.inputs.repo_url }}"
           INPUT_COMMIT="${{ github.event.inputs.commit }}"
-          [ -z "$INPUT_COMMIT" ] && INPUT_COMMIT="HEAD"
 
-          # 1. 解析包名
+          if [ -z "$INPUT_COMMIT" ]; then
+              INPUT_COMMIT="HEAD"
+          fi
+
+
+          echo "仓库: $REPO_URL"
+          echo "目标版本: $INPUT_COMMIT"
+
+
+          # 仓库名称
           REPO_NAME=$(basename "$REPO_URL" .git)
 
-          # 2. 克隆仓库并切换目标
-          git clone "$REPO_URL" target_repo
-          cd target_repo
+
+          # 克隆
+          git clone "$REPO_URL" source_repo
+
+          cd source_repo
+
+
+          # 定位目标 commit
           git checkout "$INPUT_COMMIT"
 
-          # 3. 解析完整的 40 位 SHA 和 7 位短 SHA
-          FULL_COMMIT=$(git rev-parse HEAD)
-          SHORT_COMMIT=$(echo "$FULL_COMMIT" | cut -c1-7)
 
-          # 4. 提取精确提交日期与 Unix 秒级时间戳
-          SOURCE_DATE=$(git log -1 --format="%cd" --date=format:"%Y-%m-%d")
-          COMMIT_EPOCH=$(git log -1 --format="%at")
+          # 完整 commit
+          SOURCE_VERSION=$(git rev-parse HEAD)
+
+          # OpenWrt version_abbrev 默认 7 位
+          SHORT_VERSION=$(echo "$SOURCE_VERSION" | cut -c1-7)
+
+
+          # commit 日期
+          SOURCE_DATE=$(git log -1 \
+              --format="%cd" \
+              --date=format:"%Y-%m-%d")
+
+
           DATE_DOT=$(echo "$SOURCE_DATE" | tr '-' '.')
 
-          # 5. 组装标准目录名与文件名
-          SUBDIR="${REPO_NAME}-${DATE_DOT}~${SHORT_COMMIT}"
+
+          # OpenWrt SUBDIR
+          SUBDIR="${REPO_NAME}-${DATE_DOT}~${SHORT_VERSION}"
+
           FILE="${SUBDIR}.tar.zst"
 
-          # 6. 清理 git 元数据
+
+          echo
+          echo "SUBDIR=$SUBDIR"
+          echo "FILE=$FILE"
+          echo "COMMIT=$SOURCE_VERSION"
+          echo "DATE=$SOURCE_DATE"
+
+
           cd ..
-          mv target_repo "$SUBDIR"
-          rm -rf "$SUBDIR/.git"
 
-          # 7. 严格按照 OpenWrt 原生规则打包
-          tar --sort=name \
-              --mtime="@$COMMIT_EPOCH" \
-              --owner=0 --group=0 --numeric-owner \
-              -cf - "$SUBDIR" | zstd -19 > "$FILE"
 
-          # 8. 计算 SHA256
-          HASH=$(sha256sum "$FILE" | awk '{print $1}')
+          #
+          # 关键:
+          # OpenWrt git 下载使用 git archive
+          #
+          git -C source_repo archive \
+              --format=tar \
+              --prefix="${SUBDIR}/" \
+              "$SOURCE_VERSION" \
+          | zstd -19 -T0 -q \
+          > "$FILE"
 
-          # 9. 输出结果
-          echo "## 🚀 计算完成 (已严格匹配 OpenWrt 标准)" >> $GITHUB_STEP_SUMMARY
-          echo "目标仓库: \`$REPO_URL\`" >> $GITHUB_STEP_SUMMARY
-          echo "生成文件: \`$FILE\`" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 请复制下方代码替换 Makefile 内容：" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`makefile" >> $GITHUB_STEP_SUMMARY
-          echo "SOURCE_DATE:=$SOURCE_DATE" >> $GITHUB_STEP_SUMMARY
-          echo "SOURCE_VERSION:=$FULL_COMMIT" >> $GITHUB_STEP_SUMMARY
-          echo "MIRROR_HASH:=$HASH" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+
+          # SHA256
+          MIRROR_HASH=$(sha256sum "$FILE" | awk '{print $1}')
+
+
+          echo
+          echo "================================"
+          echo "计算完成"
+          echo "================================"
+          echo
+
+
+          echo "## 🚀 OpenWrt MIRROR_HASH 计算完成" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "仓库:" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$REPO_URL\`" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "生成文件:" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$FILE\`" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### Makefile:" >> "$GITHUB_STEP_SUMMARY"
+
+          echo '```makefile' >> "$GITHUB_STEP_SUMMARY"
+          echo "SOURCE_DATE:=$SOURCE_DATE" >> "$GITHUB_STEP_SUMMARY"
+          echo "SOURCE_VERSION:=$SOURCE_VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "MIRROR_HASH:=$MIRROR_HASH" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+
+          echo
+          echo "SOURCE_DATE=$SOURCE_DATE"
+          echo "SOURCE_VERSION=$SOURCE_VERSION"
+          echo "MIRROR_HASH=$MIRROR_HASH"
