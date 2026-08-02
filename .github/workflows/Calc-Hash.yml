@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 安装打包依赖
-        run: sudo apt-get update && sudo apt-get install -y zstd git tar
+        run: sudo apt-get update && sudo apt-get install -y zstd git tar perl coreutils curl bzip2 xz-utils
 
       - name: 自动解析并按 OpenWrt 标准打包计算
         run: |
@@ -25,50 +25,43 @@ jobs:
           INPUT_COMMIT="${{ github.event.inputs.commit }}"
           [ -z "$INPUT_COMMIT" ] && INPUT_COMMIT="HEAD"
 
-          # 0. 强制使用 UTC 时区，防止 SOURCE_DATE 在跨天时发生漂移
-          export TZ=UTC
+          # 1. 下载 OpenWrt 官方最新版的 download.pl，确保打包逻辑 100% 与官方一致
+          curl -sSL "https://raw.githubusercontent.com/openwrt/openwrt/master/scripts/download.pl" -o download.pl
+          chmod +x download.pl
 
-          # 1. 解析包名
-          REPO_NAME=$(basename "$REPO_URL" .git)
-
-          # 2. 克隆仓库并切换目标
-          git clone "$REPO_URL" target_repo
-          cd target_repo
-          git checkout "$INPUT_COMMIT"
-
-          # 3. 解析完整的 40 位 SHA 和 7 位短 SHA
+          # 2. 临时克隆，仅用于获取准确的 SHA 和 时间戳
+          git clone "$REPO_URL" temp_repo
+          cd temp_repo
+          if [ "$INPUT_COMMIT" != "HEAD" ]; then
+            git checkout "$INPUT_COMMIT"
+          fi
+          
           FULL_COMMIT=$(git rev-parse HEAD)
           SHORT_COMMIT=$(echo "$FULL_COMMIT" | cut -c1-7)
-
-          # 4. 提取精确提交日期与 Unix 秒级时间戳
-          # 【修复点 1】：使用 --date=short 提取标准日期
           SOURCE_DATE=$(git log -1 --format="%cd" --date=short)
-          # 【修复点 2】：必须使用 %ct (Committer Date) 而非 %at (Author Date)
-          COMMIT_EPOCH=$(git log -1 --format="%ct")
-          DATE_DOT=$(echo "$SOURCE_DATE" | tr '-' '.')
+          cd ..
+          rm -rf temp_repo
 
-          # 5. 组装标准目录名与文件名
+          # 3. 组装标准变量
+          DATE_DOT=$(echo "$SOURCE_DATE" | tr '-' '.')
+          REPO_NAME=$(basename "$REPO_URL" .git)
           SUBDIR="${REPO_NAME}-${DATE_DOT}~${SHORT_COMMIT}"
           FILE="${SUBDIR}.tar.zst"
 
-          # 6. 清理 git 元数据
-          cd ..
-          mv target_repo "$SUBDIR"
-          rm -rf "$SUBDIR/.git"
+          # 4. 调用 OpenWrt 官方脚本执行标准的克隆、清理与打包
+          # 创建 dl 目录供脚本输出
+          mkdir -p dl
+          export TZ=UTC
+          
+          # 严格对齐官方 download.mk 的参数传递顺序:
+          # <target_dir> <filename> <hash> <md5> <url> <url_filename> <protocol> <version> <subdir>
+          ./download.pl "dl" "$FILE" "" "" "$REPO_URL" "" "git" "$FULL_COMMIT" "$SUBDIR"
 
-          # 7. 严格按照 OpenWrt 原生规则打包
-          # 【修复点 3】：显式指定 --format=gnu 格式
-          # 【修复点 4】：zstd 必须带上 -T0 开启多线程兼容，否则压缩流格式会和官方不一致
-          tar --format=gnu --sort=name \
-              --mtime="@$COMMIT_EPOCH" \
-              --owner=0 --group=0 --numeric-owner \
-              -cf - "$SUBDIR" | zstd -T0 -19 > "$FILE"
+          # 5. 计算最终的 SHA256 Hash
+          HASH=$(sha256sum "dl/$FILE" | awk '{print $1}')
 
-          # 8. 计算 SHA256
-          HASH=$(sha256sum "$FILE" | awk '{print $1}')
-
-          # 9. 输出结果
-          echo "## 🚀 计算完成 (已严格匹配 OpenWrt 标准)" >> $GITHUB_STEP_SUMMARY
+          # 6. 输出 Markdown 结果
+          echo "## 🚀 计算完成 (调用 OpenWrt 官方 download.pl 脚本)" >> $GITHUB_STEP_SUMMARY
           echo "目标仓库: \`$REPO_URL\`" >> $GITHUB_STEP_SUMMARY
           echo "生成文件: \`$FILE\`" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
