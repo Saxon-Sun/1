@@ -6,10 +6,11 @@ on:
       repo_url:
         description: 'Git 仓库地址'
         required: true
+        default: ''
       commit:
         description: 'Commit SHA / 分支名 / Tag名 (留空默认拉取最新 HEAD)'
         required: false
-        default: 'HEAD'
+        default: ''
 
 jobs:
   calc-hash:
@@ -18,13 +19,13 @@ jobs:
       - name: 安装打包依赖
         run: sudo apt-get update && sudo apt-get install -y zstd git
 
-      - name: 自动解析并打包计算
+      - name: 自动解析并按 OpenWrt 标准打包计算
         run: |
           REPO_URL="${{ github.event.inputs.repo_url }}"
           INPUT_COMMIT="${{ github.event.inputs.commit }}"
           [ -z "$INPUT_COMMIT" ] && INPUT_COMMIT="HEAD"
 
-          # 1. 自动从 URL 中解析包名
+          # 1. 解析包名
           REPO_NAME=$(basename "$REPO_URL" .git)
 
           # 2. 克隆仓库并切换目标
@@ -32,35 +33,39 @@ jobs:
           cd target_repo
           git checkout "$INPUT_COMMIT"
 
-          # 3. 自动解析完整的 40 位 SHA 和 7 位短 SHA
+          # 3. 解析完整的 40 位 SHA 和 7 位短 SHA
           FULL_COMMIT=$(git rev-parse HEAD)
           SHORT_COMMIT=$(echo "$FULL_COMMIT" | cut -c1-7)
 
-          # 4. 自动提取提交日期 (YYYY-MM-DD)
+          # 4. 提取精确提交日期与 Unix 秒级时间戳
           SOURCE_DATE=$(git log -1 --format="%cd" --date=format:"%Y-%m-%d")
+          COMMIT_EPOCH=$(git log -1 --format="%at")
           DATE_DOT=$(echo "$SOURCE_DATE" | tr '-' '.')
 
-          # 5. 组装 OpenWrt 标准目录名称与文件名
+          # 5. 组装标准目录名与文件名
           SUBDIR="${REPO_NAME}-${DATE_DOT}~${SHORT_COMMIT}"
           FILE="${SUBDIR}.tar.zst"
 
-          # 6. 清理 git 元数据并重新打包
+          # 6. 清理 git 元数据
           cd ..
           mv target_repo "$SUBDIR"
           rm -rf "$SUBDIR/.git"
 
-          # 7. 按照 OpenWrt 可重现规则压缩为 tar.zst
-          tar --sort=name --mtime="${SOURCE_DATE} 00:00:00" -cf - "$SUBDIR" | zstd -19 > "$FILE"
+          # 7. 严格按照 OpenWrt 原生规则打包
+          tar --sort=name \
+              --mtime="@$COMMIT_EPOCH" \
+              --owner=0 --group=0 --numeric-owner \
+              -cf - "$SUBDIR" | zstd -19 > "$FILE"
 
           # 8. 计算 SHA256
           HASH=$(sha256sum "$FILE" | awk '{print $1}')
 
-          # 9. 直接渲染为完整的 Makefile 格式输出到 Summary 页面
-          echo "## 🚀 计算完成" >> $GITHUB_STEP_SUMMARY
+          # 9. 输出结果
+          echo "## 🚀 计算完成 (已严格匹配 OpenWrt 标准)" >> $GITHUB_STEP_SUMMARY
           echo "目标仓库: \`$REPO_URL\`" >> $GITHUB_STEP_SUMMARY
           echo "生成文件: \`$FILE\`" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 请直接复制下方代码替换 Makefile 内容：" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 请复制下方代码替换 Makefile 内容：" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`makefile" >> $GITHUB_STEP_SUMMARY
           echo "SOURCE_DATE:=$SOURCE_DATE" >> $GITHUB_STEP_SUMMARY
           echo "SOURCE_VERSION:=$FULL_COMMIT" >> $GITHUB_STEP_SUMMARY
