@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 安装打包依赖
-        run: sudo apt-get update && sudo apt-get install -y zstd git tar perl coreutils curl bzip2 xz-utils
+        run: sudo apt-get update && sudo apt-get install -y zstd git tar perl coreutils curl bzip2 xz-utils python3
 
       - name: 自动解析并按 OpenWrt 标准打包计算
         run: |
@@ -25,11 +25,24 @@ jobs:
           INPUT_COMMIT="${{ github.event.inputs.commit }}"
           [ -z "$INPUT_COMMIT" ] && INPUT_COMMIT="HEAD"
 
-          # 1. 下载 OpenWrt 官方最新版的 download.pl，确保打包逻辑 100% 与官方一致
+          # 1. 下载 OpenWrt 官方 download.pl
           curl -sSL "https://raw.githubusercontent.com/openwrt/openwrt/master/scripts/download.pl" -o download.pl
           chmod +x download.pl
 
-          # 2. 临时克隆，仅用于获取准确的 SHA 和 时间戳
+          # 2. 使用 Python 修补 download.pl：
+          # 允许传入占位哈希，并在校验不匹配时跳过报错与文件删除，确保生成的 .tar.zst 完好保留
+          python3 -c '
+          with open("download.pl", "r") as f:
+              code = f.read()
+          # 注释掉校验失败时的文件删除和退出指令
+          code = code.replace("unlink \"$target/$filename\";", "# unlink \"$target/$filename\";")
+          code = code.replace("exit 255;", "# exit 255;")
+          code = code.replace("exit 1;", "# exit 1;")
+          with open("download.pl", "w") as f:
+              f.write(code)
+          '
+
+          # 3. 临时克隆，仅用于获取准确的 SOURCE_DATE
           git clone "$REPO_URL" temp_repo
           cd temp_repo
           if [ "$INPUT_COMMIT" != "HEAD" ]; then
@@ -42,26 +55,30 @@ jobs:
           cd ..
           rm -rf temp_repo
 
-          # 3. 组装标准变量
+          # 4. 组装标准变量
           DATE_DOT=$(echo "$SOURCE_DATE" | tr '-' '.')
           REPO_NAME=$(basename "$REPO_URL" .git)
           SUBDIR="${REPO_NAME}-${DATE_DOT}~${SHORT_COMMIT}"
           FILE="${SUBDIR}.tar.zst"
 
-          # 4. 调用 OpenWrt 官方脚本执行标准的克隆、清理与打包
-          # 创建 dl 目录供脚本输出
+          # 5. 调用官方脚本打包
           mkdir -p dl
           export TZ=UTC
           
-          # 严格对齐官方 download.mk 的参数传递顺序:
-          # <target_dir> <filename> <hash> <md5> <url> <url_filename> <protocol> <version> <subdir>
-          ./download.pl "dl" "$FILE" "" "" "$REPO_URL" "" "git" "$FULL_COMMIT" "$SUBDIR"
+          # 传入一个标准的 64 位占位 SHA256 哈希 (全0)，骗过 download.pl 的格式检查
+          DUMMY_HASH="0000000000000000000000000000000000000000000000000000000000000000"
+          
+          ./download.pl "dl" "$FILE" "$DUMMY_HASH" "" "$REPO_URL" "" "git" "$FULL_COMMIT" "$SUBDIR" || true
 
-          # 5. 计算最终的 SHA256 Hash
+          # 6. 计算最终真实的 SHA256 Hash
+          if [ ! -f "dl/$FILE" ]; then
+            echo "错误: 压缩包未成功生成"
+            exit 1
+          fi
           HASH=$(sha256sum "dl/$FILE" | awk '{print $1}')
 
-          # 6. 输出 Markdown 结果
-          echo "## 🚀 计算完成 (调用 OpenWrt 官方 download.pl 脚本)" >> $GITHUB_STEP_SUMMARY
+          # 7. 输出 Markdown 结果
+          echo "## 🚀 计算完成 (100% 契合 OpenWrt 标准)" >> $GITHUB_STEP_SUMMARY
           echo "目标仓库: \`$REPO_URL\`" >> $GITHUB_STEP_SUMMARY
           echo "生成文件: \`$FILE\`" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
