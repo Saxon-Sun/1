@@ -17,83 +17,77 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 安装打包依赖
-        run: sudo apt-get update && sudo apt-get install -y zstd git tar perl coreutils curl bzip2 xz-utils python3
+        run: sudo apt-get update && sudo apt-get install -y zstd git tar coreutils
 
-      - name: 配置环境并运行官方 download.pl 打包
+      - name: 100% 依照 OpenWrt 官方 rawgit 逻辑精准计算
         run: |
           REPO_URL="${{ github.event.inputs.repo_url }}"
           INPUT_COMMIT="${{ github.event.inputs.commit }}"
           [ -z "$INPUT_COMMIT" ] && INPUT_COMMIT="HEAD"
 
-          # 1. 下载 OpenWrt 官方 download.pl
-          curl -sSL "https://raw.githubusercontent.com/openwrt/openwrt/master/scripts/download.pl" -o download.pl
-          chmod +x download.pl
+          # 0. 强制使用 UTC 时区
+          export TZ=UTC
 
-          # 2. 补全 OpenWrt 运行所需的本地环境与模拟工具
-          export TOPDIR=$(pwd)
-          export DOWNLOAD_CHECK_CERTIFICATE=0
-          echo '{}' > projectsmirrors.json
+          # 1. 基础变量解析
+          REPO_NAME=$(basename "$REPO_URL" .git)
+          
+          # 创建工作临时目录
+          mkdir -p work_dir
+          cd work_dir
 
-          # 创建一个兼容 OpenWrt mkhash 行为的轻量级命令脚本
-          mkdir -p bin
-          cat << 'EOF' > bin/mkhash
-          #!/bin/sh
-          alg="$1"
-          file="$2"
-          if [ "$alg" = "sha256" ]; then
-              sha256sum "$file" | awk '{print $1}'
-          elif [ "$alg" = "md5" ]; then
-              md5sum "$file" | awk '{print $1}'
-          fi
-          EOF
-          chmod +x bin/mkhash
-          export PATH="$(pwd)/bin:$PATH"
-          export MKHASH="mkhash"
-
-          # 3. 临时克隆，仅用于获取准确的 SOURCE_DATE 和 FULL_COMMIT
+          # 2. 模拟 OpenWrt 的 git clone 与 checkout
           git clone "$REPO_URL" temp_repo
           cd temp_repo
           if [ "$INPUT_COMMIT" != "HEAD" ]; then
             git checkout "$INPUT_COMMIT"
           fi
-          
+
+          # 3. 提取官方标准的 Commit 信息与时间戳 (%ct)
           FULL_COMMIT=$(git rev-parse HEAD)
           SHORT_COMMIT=$(echo "$FULL_COMMIT" | cut -c1-7)
           SOURCE_DATE=$(git log -1 --format="%cd" --date=short)
-          cd ..
-          rm -rf temp_repo
-
-          # 4. 组装标准变量
+          TAR_TIMESTAMP=$(git log -1 --no-show-signature --format='@%ct')
           DATE_DOT=$(echo "$SOURCE_DATE" | tr '-' '.')
-          REPO_NAME=$(basename "$REPO_URL" .git)
+
+          # 4. 组装标准目录名与文件名
           SUBDIR="${REPO_NAME}-${DATE_DOT}~${SHORT_COMMIT}"
           FILE="${SUBDIR}.tar.zst"
 
-          # 5. 使用 Python 稍微调整 download.pl 校验逻辑（防止因为占位哈希不匹配而 unlink 刚打包好的文件）
-          python3 -c '
-          with open("download.pl", "r") as f:
-              code = f.read()
-          code = code.replace("unlink \"$target/$filename\";", "# unlink \"$target/$filename\";")
-          with open("download.pl", "w") as f:
-              f.write(code)
-          '
-
-          # 6. 调用官方脚本打包
-          mkdir -p dl
-          export TZ=UTC
-          DUMMY_HASH="0000000000000000000000000000000000000000000000000000000000000000"
+          # 5. 执行 OpenWrt 官方的核心规程：git archive 提取归档 (应用 .gitattributes)
+          git config core.abbrev 8
+          git archive --format=tar HEAD --output="../${SUBDIR}.tar.git"
           
-          ./download.pl "dl" "$FILE" "$DUMMY_HASH" "" "$REPO_URL" "" "git" "$FULL_COMMIT" "$SUBDIR" || true
-
-          # 7. 计算最终真实 Hash
-          if [ ! -f "dl/$FILE" ]; then
-            echo "错误: 压缩包未成功生成"
-            exit 1
+          # 6. 处理子模块 (如果存在 .gitmodules)
+          if [ -f ".gitmodules" ]; then
+              cd ..
+              tar --numeric-owner --owner=0 --group=0 --ignore-failed-read -C temp_repo -f "${SUBDIR}.tar.git" -r .git .gitmodules 2>/dev/null
+              rm -rf "$SUBDIR" && mkdir "$SUBDIR"
+              tar -C "$SUBDIR" -xf "${SUBDIR}.tar.git"
+              cd "$SUBDIR"
+              git submodule update --init --recursive
+              rm -rf .git .gitmodules
+              cd ..
+          else
+              cd ..
+              rm -rf "$SUBDIR" && mkdir "$SUBDIR"
+              tar -C "$SUBDIR" -xf "${SUBDIR}.tar.git"
           fi
-          HASH=$(sha256sum "dl/$FILE" | awk '{print $1}')
 
-          # 8. 输出 Markdown 结果
-          echo "## 🚀 计算完成 (100% 契合 OpenWrt 标准)" >> $GITHUB_STEP_SUMMARY
+          # 7. 严格按照 OpenWrt 官方 dl_tar_pack 规则打包并使用 ultra -20 压缩
+          # 官方定义: TAR --numeric-owner --owner=0 --group=0 --mode=a-s --sort=name --mtime="$TAR_TIMESTAMP" -c $(2) | zstd -T0 --ultra -20 -c
+          tar --numeric-owner --owner=0 --group=0 --mode=a-s --sort=name \
+              --mtime="$TAR_TIMESTAMP" \
+              -c "$SUBDIR" | zstd -T0 --ultra -20 -c > "$FILE"
+
+          # 8. 移动到根目录并计算 SHA256 Hash
+          mv "$FILE" ../../"$FILE"
+          cd ../../
+          rm -rf work_dir
+
+          HASH=$(sha256sum "$FILE" | awk '{print $1}')
+
+          # 9. 输出结果
+          echo "## 🚀 计算完成 (完全对齐 OpenWrt 官方源码逻辑)" >> $GITHUB_STEP_SUMMARY
           echo "目标仓库: \`$REPO_URL\`" >> $GITHUB_STEP_SUMMARY
           echo "生成文件: \`$FILE\`" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
