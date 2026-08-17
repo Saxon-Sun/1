@@ -88,7 +88,7 @@ jobs:
       run: |
         sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
         sudo timedatectl set-timezone $TZ
-        sudo apt-get update && sudo apt-get install -y ccache
+        sudo apt-get update
 
     - name: Clone Source Code
       working-directory: /github-builder
@@ -137,15 +137,6 @@ jobs:
         echo "=== 当前 feeds.conf.default 内容 ==="
         cat feeds.conf.default
 
-    - name: Restore Ccache
-      uses: actions/cache/restore@v5
-      with:
-        path: /github-builder/openwrt/.ccache
-        key: ${{ runner.os }}-ccache-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
-        restore-keys: |
-          ${{ runner.os }}-ccache-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-
-          ${{ runner.os }}-ccache-${{ env.BUILD_TYPE }}-
-
     - name: Configure Feeds & Apply Custom Configuration
       working-directory: /github-builder/openwrt
       run: |
@@ -188,14 +179,6 @@ jobs:
       working-directory: /github-builder/openwrt
       id: compile
       run: |
-        export CCACHE_DIR=$(pwd)/.ccache
-        mkdir -p "$CCACHE_DIR"
-        
-        ccache -M 2G -F 0
-        echo "====== Ccache 初始状态 ======"
-        ccache -s
-        echo "============================="
-        
         echo "开始编译..."
         if ! make -j$(nproc); then
             echo "❌ 多线程编译失败，显示磁盘使用情况..."
@@ -204,10 +187,6 @@ jobs:
             make -j1 V=s
         fi
         echo "✅ 编译流程结束"
-        
-        echo "====== 编译后 Ccache 统计 ======"
-        ccache -s
-        echo "================================"
         
         echo "显示磁盘使用情况..."
         df -h
@@ -238,7 +217,7 @@ jobs:
         echo "开始清理临时文件与冗余组件..."
         rm -rf build_dir
         rm -rf $(find ./bin/targets/ -type d -name "packages") 2>/dev/null || true
-        find ./bin/targets/ -type f -name "*squashfs-rootfs*" -exec echo "🗑️  删除文件: {}" \; -delete
+        find ./bin/targets/ -type f -name "*squashfs-rootfs*" -exec echo "🗑️ 删除文件: {}" \; -delete
         ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/* 2>/dev/null || true
         
         if [ -n "$(find bin/targets/ -name '*.tar.gz' -o -name '*.img*' -o -name '*.bin' 2>/dev/null)" ]; then
@@ -260,13 +239,6 @@ jobs:
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
         ./upload.sh $TARGET_Name ${{ inputs.pure_firmware }}
-        
-    - name: Save Ccache
-      if: steps.compile.outputs.status == 'success' && !cancelled()
-      uses: actions/cache/save@v5
-      with:
-        path: /github-builder/openwrt/.ccache
-        key: ${{ runner.os }}-ccache-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
 
   cleanup:
     runs-on: ubuntu-latest
