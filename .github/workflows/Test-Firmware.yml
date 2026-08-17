@@ -205,11 +205,22 @@ jobs:
         find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
         find bin/packages/ -type f \( -name "*.ipk" -o -name "*.apk" \) -exec cp -f {} artifact/package/ \;
 
-    - name: Upload Firmware via Script
-      working-directory: /github-builder/openwrt
+    # =======================================================
+    # actions/upload-artifact 步骤
+    # =======================================================
+    - name: Upload Firmware Artifact
+      uses: actions/upload-artifact@v7
       if: steps.compile.outputs.status == 'success' && !cancelled()
-      run: |
-        ./upload.sh $TARGET_Name
+      with:
+        name: Firmware-${{ env.TARGET_Name }}-${{ inputs.build_branch }}
+        path: /github-builder/openwrt/artifact/firmware/
+
+    - name: Upload Packages Artifact
+      uses: actions/upload-artifact@v4
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      with:
+        name: Packages-${{ env.TARGET_Name }}-${{ inputs.build_branch }}
+        path: /github-builder/openwrt/artifact/package/
 
   cleanup:
     runs-on: ubuntu-latest
