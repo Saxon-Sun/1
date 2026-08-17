@@ -9,15 +9,15 @@ on:
         type: string
         default: 'openwrt-25.12'
       packages:
-        description: 'Packages 分支或完整 src-git 行'
+        description: 'Packages 链接或完整 src-git 行 (留空则保持源码默认)'
         required: false
         type: string
-        default: 'openwrt-25.12'
+        default: ''
       luci:
-        description: 'LuCI 分支或完整 src-git 行'
+        description: 'LuCI 链接或完整 src-git 行 (留空则保持源码默认)'
         required: false
         type: string
-        default: 'openwrt-25.12'
+        default: ''
       ssh:
         description: '开启 SSH 连接 (调试用)'
         required: false
@@ -97,40 +97,44 @@ jobs:
         ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
 
     # =======================================================
-    # 动态写入/覆盖 feeds.conf.default
+    # 按需修改 feeds.conf.default
     # =======================================================
     - name: Override feeds.conf.default
       working-directory: /github-builder/openwrt
       run: |
-        echo "正在配置 feeds.conf.default..."
-        
+        echo "检查并处理 feeds.conf.default..."
+
         # 处理 Packages
         PKG_IN="${{ inputs.packages }}"
-        [ -z "$PKG_IN" ] && PKG_IN="${{ inputs.build_branch }}"
-        if [[ "$PKG_IN" == src-git* ]]; then
-          PKG_LINE="$PKG_IN"
+        if [ -n "$PKG_IN" ]; then
+          if [[ "$PKG_IN" == src-* ]]; then
+            PKG_LINE="$PKG_IN"
+          else
+            PKG_LINE="src-git packages $PKG_IN"
+          fi
+          echo "正在将 packages 替换为: $PKG_LINE"
+          sed -i '/^src-git packages/d' feeds.conf.default
+          echo "$PKG_LINE" >> feeds.conf.default
         else
-          PKG_LINE="src-git packages https://github.com/immortalwrt/packages.git;$PKG_IN"
+          echo "packages 留空，保留源码默认配置"
         fi
 
         # 处理 LuCI
         LUCI_IN="${{ inputs.luci }}"
-        [ -z "$LUCI_IN" ] && LUCI_IN="${{ inputs.build_branch }}"
-        if [[ "$LUCI_IN" == src-git* ]]; then
-          LUCI_LINE="$LUCI_IN"
+        if [ -n "$LUCI_IN" ]; then
+          if [[ "$LUCI_IN" == src-* ]]; then
+            LUCI_LINE="$LUCI_IN"
+          else
+            LUCI_LINE="src-git luci $LUCI_IN"
+          fi
+          echo "正在将 luci 替换为: $LUCI_LINE"
+          sed -i '/^src-git luci/d' feeds.conf.default
+          echo "$LUCI_LINE" >> feeds.conf.default
         else
-          LUCI_LINE="src-git luci https://github.com/immortalwrt/luci.git;$LUCI_IN"
+          echo "luci 留空，保留源码默认配置"
         fi
 
-        # 覆盖文件内容
-        cat > feeds.conf.default <<EOF
-        $PKG_LINE
-        $LUCI_LINE
-        src-git routing https://github.com/immortalwrt/routing.git;${{ inputs.build_branch }}
-        src-git telephony https://github.com/immortalwrt/telephony.git;${{ inputs.build_branch }}
-        EOF
-
-        echo "=== 生成的 feeds.conf.default 内容 ==="
+        echo "=== 当前 feeds.conf.default 内容 ==="
         cat feeds.conf.default
 
     - name: Restore Ccache
