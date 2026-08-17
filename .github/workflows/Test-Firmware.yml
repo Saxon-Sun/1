@@ -38,7 +38,7 @@ jobs:
       actions: write
     
     env:
-      TARGET_Name: immortalwrt-x86
+      TARGET_Name: immortalwrt-test
       BUILD_TYPE: x86
       REPO_URL: https://github.com/immortalwrt/immortalwrt
       REPO_BRANCH: ${{ inputs.build_branch }}
