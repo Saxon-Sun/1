@@ -216,7 +216,7 @@ jobs:
         path: /github-builder/openwrt/artifact/firmware/
 
     - name: Upload Packages Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: steps.compile.outputs.status == 'success' && !cancelled()
       with:
         name: Packages-${{ env.TARGET_Name }}-${{ inputs.build_branch }}
