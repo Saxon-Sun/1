@@ -220,7 +220,8 @@ jobs:
         oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
         tags: tag:ci
-        args: --ssh --hostname=actions
+        hostname: actions
+        args: --ssh
         version: latest
 
     - name: Send SSH Info Notification and Wait
