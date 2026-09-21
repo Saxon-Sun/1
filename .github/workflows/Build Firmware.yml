@@ -215,12 +215,13 @@ jobs:
 
     - name: Connect to Tailscale
       if: inputs.ssh == true
-      uses: tailscale/github-action@v4.1.2
+      uses: tailscale/github-action@v4
       with:
         oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
         oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
         tags: tag:ci
-        args: --ssh
+        args: --ssh --hostname=build-firmware
+        version: latest
 
     - name: Send SSH Info Notification and Wait
       if: inputs.ssh == true
