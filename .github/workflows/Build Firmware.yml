@@ -264,7 +264,7 @@ jobs:
         
         echo "显示磁盘使用情况..."
         df -h
-
+        
         echo "📦 统计体积最大的前 20 个软件包 (按实际文件大小排序)"
         if [ -d "bin/" ]; then
             find bin/ -type f \( -name "*.apk" -o -name "*.ipk" \) -exec du -b {} + 2>/dev/null | \
@@ -287,7 +287,7 @@ jobs:
         else
             echo "⚠️ 未找到 bin 目录，跳过体积统计"
         fi
-
+        
         echo "开始清理临时文件与冗余组件..."
         rm -rf build_dir
         rm -rf $(find ./bin/targets/ -type d -name "packages") 2>/dev/null || true
@@ -301,6 +301,43 @@ jobs:
         fi
 
     # ==========================================
+    # N1 特有步骤: 动态获取指定标签下最新内核版本
+    # ==========================================
+    - name: Get Latest Kernel Version (N1)
+      if: steps.compile.outputs.status == 'success' && env.BUILD_TYPE == 'n1' && !cancelled()
+      id: get_kernel
+      env:
+        TARGET_KERNEL_REPO: "ophub/kernel"      # 目标仓库
+        TARGET_KERNEL_TAG: "kernel_stable"      # 目标标签 (stable / beta / flippy)
+        TARGET_KERNEL_VER: "6.12"               # 目标基础版本 (6.12 / 6.1 / 6.6)
+      run: |
+        echo "=================================================="
+        echo "🎯 目标仓库: ${TARGET_KERNEL_REPO}"
+        echo "🏷️ 目标标签: ${TARGET_KERNEL_TAG}"
+        echo "📦 基础版本: ${TARGET_KERNEL_VER}"
+        echo "=================================================="
+        echo "正在请求 GitHub API 抓取最新内核..."
+        
+        LATEST_KERNEL=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${TARGET_KERNEL_REPO}/releases/tags/${TARGET_KERNEL_TAG}" | \
+          jq -r '.assets[].name' | grep -E "^${TARGET_KERNEL_VER}\.[0-9]+\.tar\.gz$" | sort -V | tail -n 1 | sed 's/\.tar\.gz//')
+        
+        if [ -z "$LATEST_KERNEL" ]; then
+          echo "❌ 抓取失败！"
+          echo "可能的原因："
+          echo "  1. 该标签下根本不存在以 ${TARGET_KERNEL_VER} 开头的内核。"
+          echo "  2. 触发了 API 限制或网络波动。"
+          echo "=================================================="
+          exit 1
+        fi
+        
+        echo "✅ 抓取成功！最终选定的内核版本号为: "
+        echo "👉 ${LATEST_KERNEL}"
+        echo "=================================================="
+        echo "PACKIT_KERNEL_VER=$LATEST_KERNEL" >> $GITHUB_ENV
+        echo "PACKIT_KERNEL_REPO=$TARGET_KERNEL_REPO" >> $GITHUB_ENV
+
+    # ==========================================
     # N1 特有步骤: 打包 Armvirt 为 OpenWrt
     # ==========================================
     - name: Package Armvirt as OpenWrt (N1 Only)
@@ -308,9 +345,12 @@ jobs:
       uses: unifreq/openwrt_packit@master
       env:
         OPENWRT_ARMSR: openwrt/bin/targets/*/*/*generic-rootfs.tar.gz
+        KERNEL_REPO_URL: ${{ env.PACKIT_KERNEL_REPO }}
+        KERNEL_VERSION_NAME: ${{ env.PACKIT_KERNEL_VER }}
+        KERNEL_AUTO_LATEST: false
         PACKAGE_SOC: s905d
-        KERNEL_VERSION_NAME: 6.12.y
         WHOAMI: Saxon
+        ENABLE_WIFI_K510: 1
 
     # ==========================================
     # 处理 Artifacts 和上传
