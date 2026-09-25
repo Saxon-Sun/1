@@ -303,7 +303,7 @@ jobs:
     # ==========================================
     # N1 特有步骤: 动态获取指定标签下最新内核版本
     # ==========================================
-    - name: Get Latest Kernel Version (N1)
+    - name: Get Latest Kernel Version (N1 Only)
       if: steps.compile.outputs.status == 'success' && env.BUILD_TYPE == 'n1' && !cancelled()
       id: get_kernel
       env:
