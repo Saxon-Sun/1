@@ -55,7 +55,8 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       has_target: ${{ steps.set-matrix.outputs.has_target }}
     steps:
-      - id: set-matrix
+      - name: Generate Build Matrix
+        id: set-matrix
         run: |
           TARGETS=()
           [[ "${{ inputs.build_x86_1 }}" == "true" ]] && TARGETS+=("immortalwrt-x86-93")
@@ -154,7 +155,7 @@ jobs:
         preinstalled-runtimes: true
         swap-storage: true
 
-    - name: 创建模拟物理磁盘 (LVM)
+    - name: Setup Virtual Disk (LVM)
       run: |
         mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
         root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
