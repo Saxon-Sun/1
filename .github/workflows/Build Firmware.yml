@@ -311,7 +311,7 @@ jobs:
       id: get_kernel
       env:
         TARGET_KERNEL_REPO: "ophub/kernel"      # 目标仓库
-        TARGET_KERNEL_TAG: "kernel_stable"      # 目标标签 (stable / beta / flippy)
+        TARGET_KERNEL_TAG: "kernel_flippy"      # 目标标签 (stable / beta / flippy)
         TARGET_KERNEL_VER: "6.12"               # 目标基础版本 (6.12 / 6.1 / 6.6)
       run: |
         echo "=================================================="
