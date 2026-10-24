@@ -3,18 +3,36 @@ name: Test-Firmware
 on:
   workflow_dispatch:
     inputs:
-      build_branch:
-        description: '编译主分支 (如: openwrt-25.12)'
+      repo_url:
+        description: '选择源码仓库 (ImmortalWrt 或 OpenWrt 官方)'
         required: true
-        type: string
+        type: choice
+        options:
+          - https://github.com/immortalwrt/immortalwrt
+          - https://github.com/openwrt/openwrt
+        default: 'https://github.com/immortalwrt/immortalwrt'
+      build_branch:
+        description: '选择编译主分支 (OpenWrt主线选main，ImmortalWrt主线选master)'
+        required: true
+        type: choice
+        options:
+          - openwrt-25.12
+          - openwrt-24.10
+          - master
+          - main
         default: 'openwrt-25.12'
+      single_package:
+        description: '仅编译指定包 (如: go2rtc，多个用空格隔开，留空则编完整固件)'
+        required: false
+        type: string
+        default: ''
       packages:
-        description: 'Packages 链接或完整 src-git 行 (留空则保持源码默认)'
+        description: 'Packages 源 (格式: https://github.com/Saxon-Sun/packages.git^分支名)'
         required: false
         type: string
         default: ''
       luci:
-        description: 'LuCI 链接或完整 src-git 行 (留空则保持源码默认)'
+        description: 'LuCI 源 (格式: https://github.com/Saxon-Sun/luci.git^分支名)'
         required: false
         type: string
         default: ''
@@ -26,7 +44,7 @@ on:
 
 jobs:
   build:
-    name: Build - immortalwrt-x86 (${{ inputs.build_branch }})
+    name: Build - ${{ inputs.repo_url == 'https://github.com/openwrt/openwrt' && 'openwrt' || 'immortalwrt' }} (${{ inputs.build_branch }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,7 +52,9 @@ jobs:
     
     env:
       TARGET_Name: immortalwrt-test
-      REPO_URL: https://github.com/immortalwrt/immortalwrt
+      BUILD_TYPE: test
+      REPO_URL: ${{ inputs.repo_url }}
+      REPO_NAME: ${{ inputs.repo_url == 'https://github.com/openwrt/openwrt' && 'openwrt' || 'immortalwrt' }}
       REPO_BRANCH: ${{ inputs.build_branch }}
       TZ: Asia/Shanghai
 
@@ -80,15 +100,37 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo apt update -y
+        sudo apt full-upgrade -y
+        sudo apt install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
+          bzip2 ccache clang cmake cpio curl device-tree-compiler ecj fastjar flex gawk gettext gcc-multilib \
+          g++-multilib git gnutls-dev gperf haveged help2man intltool lib32gcc-s1 libc6-dev-i386 libelf-dev \
+          libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpython3-dev \
+          libreadline-dev libssl-dev libtool libyaml-dev libz-dev lld llvm lrzsz mkisofs msmtp nano \
+          ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply python3-docutils \
+          python3-pyelftools qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs \
+          upx-ucl unzip vim wget xmlto xxd zlib1g-dev zstd
         sudo timedatectl set-timezone $TZ
-        sudo apt-get update
 
     - name: Clone Source Code
       working-directory: /github-builder
       run: |
+        echo "正在克隆源码: $REPO_URL (分支: $REPO_BRANCH)"
         git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /github-builder/openwrt $GITHUB_WORKSPACE/openwrt
+
+    # =======================================================
+    # 恢复 Ccache 缓存 (按 REPO_NAME 区分 openwrt 与 immortalwrt)
+    # =======================================================
+    - name: Restore Ccache
+      uses: actions/cache/restore@v5
+      with:
+        path: /github-builder/openwrt/.ccache
+        key: ${{ runner.os }}-ccache-${{ env.REPO_NAME }}-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-${{ env.REPO_NAME }}-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-
+          ${{ runner.os }}-ccache-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-
+          ${{ runner.os }}-ccache-x86-${{ env.REPO_BRANCH }}-
 
     # =======================================================
     # 按需修改 feeds.conf.default
@@ -97,8 +139,8 @@ jobs:
       working-directory: /github-builder/openwrt
       run: |
         echo "检查并处理 feeds.conf.default..."
-
-        # 处理 Packages
+        
+        # 处理 Packages (兼容 src-git 和 src-git-full)
         PKG_IN="${{ inputs.packages }}"
         if [ -n "$PKG_IN" ]; then
           if [[ "$PKG_IN" == src-* ]]; then
@@ -107,13 +149,13 @@ jobs:
             PKG_LINE="src-git packages $PKG_IN"
           fi
           echo "正在将 packages 替换为: $PKG_LINE"
-          sed -i '/^src-git packages/d' feeds.conf.default
+          sed -i '/^src-git\(-full\)\? packages /d' feeds.conf.default
           echo "$PKG_LINE" >> feeds.conf.default
         else
           echo "packages 留空，保留源码默认配置"
         fi
-
-        # 处理 LuCI
+        # 处理 LuCI (兼容 src-git 和 src-git-full)
+        
         LUCI_IN="${{ inputs.luci }}"
         if [ -n "$LUCI_IN" ]; then
           if [[ "$LUCI_IN" == src-* ]]; then
@@ -122,7 +164,7 @@ jobs:
             LUCI_LINE="src-git luci $LUCI_IN"
           fi
           echo "正在将 luci 替换为: $LUCI_LINE"
-          sed -i '/^src-git luci/d' feeds.conf.default
+          sed -i '/^src-git\(-full\)\? luci /d' feeds.conf.default
           echo "$LUCI_LINE" >> feeds.conf.default
         else
           echo "luci 留空，保留源码默认配置"
@@ -146,6 +188,17 @@ jobs:
         
         echo "正在应用自定义配置..."
         ./diy.sh $TARGET_Name
+        
+        # 如果指定了 single_package，自动将其写入 .config 设为 =m (编译为独立安装包)
+        SINGLE_PKG="${{ inputs.single_package }}"
+        if [ -n "$SINGLE_PKG" ]; then
+          for pkg in $SINGLE_PKG; do
+            echo "🔧 强制开启软件包编译配置: CONFIG_PACKAGE_${pkg}=m"
+            sed -i "/CONFIG_PACKAGE_${pkg}[= ]/d" .config
+            echo "CONFIG_PACKAGE_${pkg}=m" >> .config
+          done
+        fi
+        
         make defconfig
 
     - name: Connect to Tailscale (SSH Debug)
@@ -165,62 +218,151 @@ jobs:
     - name: Download Dependencies
       working-directory: /github-builder/openwrt
       run: |
-        make download -j$(nproc)
+        SINGLE_PKG="${{ inputs.single_package }}"
+        if [ -n "$SINGLE_PKG" ]; then
+          echo "📥 单包模式：按需下载依赖..."
+          for pkg in $SINGLE_PKG; do
+            make package/${pkg}/download V=s
+          done
+        else
+          echo "📥 完整固件模式：下载全部依赖..."
+          make download -j$(nproc)
+        fi
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
-    - name: Compile Firmware
+    - name: Compile Firmware or Single Package
       working-directory: /github-builder/openwrt
       id: compile
       run: |
-        echo "开始编译..."
-        if ! make -j$(nproc); then
-            echo "❌ 多线程编译失败，显示磁盘使用情况..."
-            df -h
-            echo "尝试单线程并输出日志..."
-            make -j1 V=s
-        fi
-        echo "✅ 编译流程结束"
-        
-        echo "显示磁盘使用情况..."
-        df -h
-
-        echo "开始清理临时文件与冗余组件..."
-        rm -rf build_dir
-        rm -rf $(find ./bin/targets/ -type d -name "packages") 2>/dev/null || true
-        find ./bin/targets/ -type f -name "*squashfs-rootfs*" -exec echo "🗑️ 删除文件: {}" \; -delete
-        ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/* 2>/dev/null || true
-        
-        if [ -n "$(find bin/targets/ -name '*.tar.gz' -o -name '*.img*' -o -name '*.bin' 2>/dev/null)" ]; then
-             echo "status=success" >> $GITHUB_OUTPUT
+        export CCACHE_DIR=$(pwd)/.ccache
+        mkdir -p "$CCACHE_DIR"
+        ccache -M 2G -F 0
+        echo "====== Ccache 初始状态 ======"
+        ccache -s
+        echo "============================="
+        SINGLE_PKG="${{ inputs.single_package }}"
+        if [ -n "$SINGLE_PKG" ]; then
+            echo "🎯 [单包测试模式] 仅编译指定软件包: $SINGLE_PKG"
+            echo "1. 准备基础编译工具链 (Tools & Toolchain)..."
+            make tools/install -j$(nproc)
+            make toolchain/install -j$(nproc)
+            
+            echo "2. 开始编译目标软件包..."
+            for pkg in $SINGLE_PKG; do
+                echo "👉 正在编译: $pkg"
+                if ! make package/${pkg}/compile -j$(nproc); then
+                    echo "❌ 多线程编译 $pkg 失败，切换单线程输出详细报错日志 (供 PR 排查)..."
+                    make package/${pkg}/compile -j1 V=s
+                    exit 1
+                fi
+            done
+            
+            echo "✅ 单包编译完成！"
+            if [ -n "$(find bin/packages/ -type f \( -name '*.ipk' -o -name '*.apk' \) 2>/dev/null)" ]; then
+                echo "pkg_status=success" >> $GITHUB_OUTPUT
+            else
+                echo "❌ 未检测到生成的 .ipk 或 .apk 软件包！"
+                exit 1
+            fi
         else
-             echo "⚠️ 未检测到固件产物，可能编译失败"
+            echo "🚀 [完整固件模式] 开始完整编译..."
+            if ! make -j$(nproc); then
+                echo "❌ 多线程编译失败，显示磁盘使用情况..."
+                df -h
+                echo "尝试单线程并输出日志..."
+                make -j1 V=s
+            fi
+            echo "✅ 编译流程结束"
+            
+            echo "显示磁盘使用情况..."
+            df -h
+            echo "开始清理临时文件与冗余组件..."
+            rm -rf build_dir
+            rm -rf $(find ./bin/targets/ -type d -name "packages") 2>/dev/null || true
+            find ./bin/targets/ -type f -name "*squashfs-rootfs*" -exec echo "🗑️ 删除文件: {}" \; -delete
+            ls -la "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*/* 2>/dev/null || true
+            
+            if [ -n "$(find bin/targets/ -name '*.tar.gz' -o -name '*.img*' -o -name '*.bin' 2>/dev/null)" ]; then
+                 echo "fw_status=success" >> $GITHUB_OUTPUT
+                 echo "pkg_status=success" >> $GITHUB_OUTPUT
+            else
+                 echo "⚠️ 未检测到固件产物，可能编译失败"
+                 exit 1
+            fi
         fi
+        echo "====== 编译后 Ccache 统计 ======"
+        ccache -s
+        echo "================================"
 
     - name: Prepare Artifacts
       working-directory: /github-builder/openwrt
-      if: steps.compile.outputs.status == 'success' && !cancelled()
+      if: (steps.compile.outputs.fw_status == 'success' || steps.compile.outputs.pkg_status == 'success') && !cancelled()
       run: |
         mkdir -p artifact/{firmware,package}
-        find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
-        find bin/packages/ -type f \( -name "*.ipk" -o -name "*.apk" \) -exec cp -f {} artifact/package/ \;
+        if [ "${{ steps.compile.outputs.fw_status }}" == "success" ]; then
+          find bin/targets/ -type f -exec cp -f {} artifact/firmware/ \;
+        fi
+        if [ "${{ steps.compile.outputs.pkg_status }}" == "success" ]; then
+          find bin/packages/ -type f \( -name "*.ipk" -o -name "*.apk" \) -exec cp -f {} artifact/package/ \;
+          echo "📦 已生成的安装包列表："
+          ls -lh artifact/package/
+        fi
 
     # =======================================================
-    # actions/upload-artifact 步骤
+    # actions/upload-artifact 步骤 (产物名自动带上 openwrt 或 immortalwrt)
     # =======================================================
     - name: Upload Firmware Artifact
       uses: actions/upload-artifact@v7
-      if: steps.compile.outputs.status == 'success' && !cancelled()
+      if: steps.compile.outputs.fw_status == 'success' && !cancelled()
       with:
-        name: Firmware-${{ env.TARGET_Name }}-${{ inputs.build_branch }}
+        name: Firmware-${{ env.REPO_NAME }}-${{ inputs.build_branch }}
         path: /github-builder/openwrt/artifact/firmware/
 
     - name: Upload Packages Artifact
       uses: actions/upload-artifact@v7
-      if: steps.compile.outputs.status == 'success' && !cancelled()
+      if: steps.compile.outputs.pkg_status == 'success' && !cancelled()
       with:
-        name: Packages-${{ env.TARGET_Name }}-${{ inputs.build_branch }}
+        name: Packages-${{ env.REPO_NAME }}-${{ inputs.build_branch }}
         path: /github-builder/openwrt/artifact/package/
+
+    # =======================================================
+    # 保存更新 Ccache 缓存
+    # =======================================================
+    - name: Delete Old Caches
+      if: (steps.compile.outputs.fw_status == 'success' || steps.compile.outputs.pkg_status == 'success') && !cancelled()
+      uses: actions/github-script@v9
+      with:
+        script: |
+          const repoName = process.env.REPO_NAME;
+          const buildType = process.env.BUILD_TYPE;
+          const repoBranch = process.env.REPO_BRANCH;
+          const key_prefix = `${{ runner.os }}-ccache-${repoName}-${buildType}-${repoBranch}-`;
+          try {
+            const caches = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              key: key_prefix,
+              ref: context.ref,
+            });
+            for (const cache of caches.data.actions_caches) {
+              console.log(`🗑️ 删除旧缓存 ID: ${cache.id} Key: ${cache.key}`);
+              await github.rest.actions.deleteActionsCacheById({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                cache_id: cache.id,
+              });
+            }
+          } catch (error) {
+            console.log(`⚠️ 清理失败: ${error.message}`);
+          }
+
+    - name: Save Ccache
+      if: (steps.compile.outputs.fw_status == 'success' || steps.compile.outputs.pkg_status == 'success') && !cancelled()
+      uses: actions/cache/save@v5
+      with:
+        path: /github-builder/openwrt/.ccache
+        key: ${{ runner.os }}-ccache-${{ env.REPO_NAME }}-${{ env.BUILD_TYPE }}-${{ env.REPO_BRANCH }}-${{ github.run_id }}
 
   cleanup:
     runs-on: ubuntu-latest
