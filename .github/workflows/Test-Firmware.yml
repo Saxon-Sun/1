@@ -27,12 +27,12 @@ on:
         type: string
         default: ''
       packages:
-        description: 'Packages 源 (格式: https://github.com/Saxon-Sun/packages.git^分支名)'
+        description: 'Packages 源 (格式: https://github.com/Saxon-Sun/packages.git;分支名)'
         required: false
         type: string
         default: ''
       luci:
-        description: 'LuCI 源 (格式: https://github.com/Saxon-Sun/luci.git^分支名)'
+        description: 'LuCI 源 (格式: https://github.com/Saxon-Sun/luci.git;分支名)'
         required: false
         type: string
         default: ''
@@ -218,16 +218,8 @@ jobs:
     - name: Download Dependencies
       working-directory: /github-builder/openwrt
       run: |
-        SINGLE_PKG="${{ inputs.single_package }}"
-        if [ -n "$SINGLE_PKG" ]; then
-          echo "📥 单包模式：按需下载依赖..."
-          for pkg in $SINGLE_PKG; do
-            make package/${pkg}/download V=s
-          done
-        else
-          echo "📥 完整固件模式：下载全部依赖..."
-          make download -j$(nproc)
-        fi
+        echo "📥下载依赖..."
+        make download -j$(nproc)
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
@@ -247,6 +239,7 @@ jobs:
             echo "1. 准备基础编译工具链 (Tools & Toolchain)..."
             make tools/install -j$(nproc)
             make toolchain/install -j$(nproc)
+            make target/linux/compile -j$(nproc)
             
             echo "2. 开始编译目标软件包..."
             for pkg in $SINGLE_PKG; do
