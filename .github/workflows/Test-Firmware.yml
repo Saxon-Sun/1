@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       repo_url:
-        description: '选择源码仓库 (ImmortalWrt 或 OpenWrt 官方)'
+        description: '选择源码仓库'
         required: true
         type: choice
         options:
@@ -12,7 +12,7 @@ on:
           - https://github.com/openwrt/openwrt
         default: 'https://github.com/immortalwrt/immortalwrt'
       build_branch:
-        description: '选择编译主分支 (OpenWrt主线选main，ImmortalWrt主线选master)'
+        description: '选择编译分支'
         required: true
         type: choice
         options:
@@ -22,17 +22,17 @@ on:
           - main
         default: 'openwrt-25.12'
       single_package:
-        description: '仅编译指定包 (如: go2rtc，多个用空格隔开，留空则编完整固件)'
+        description: '编译指定包 (多个用空格隔开，留空则编完整固件)'
         required: false
         type: string
         default: ''
       packages:
-        description: 'Packages 源 (格式: 仓库名.git;分支名，如 packages.git;main)'
+        description: 'Packages 源 (格式: 仓库名.git;分支名)'
         required: false
         type: string
         default: ''
       luci:
-        description: 'LuCI 源 (格式: 仓库名.git;分支名，如 luci.git;main)'
+        description: 'LuCI 源 (格式: 仓库名.git;分支名)'
         required: false
         type: string
         default: ''
