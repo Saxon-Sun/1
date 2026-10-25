@@ -27,12 +27,12 @@ on:
         type: string
         default: ''
       packages:
-        description: 'Packages 源 (格式: https://github.com/Saxon-Sun/packages.git;分支名)'
+        description: 'Packages 源 (格式: 仓库名.git;分支名，如 packages.git;main)'
         required: false
         type: string
         default: ''
       luci:
-        description: 'LuCI 源 (格式: https://github.com/Saxon-Sun/luci.git;分支名)'
+        description: 'LuCI 源 (格式: 仓库名.git;分支名，如 luci.git;main)'
         required: false
         type: string
         default: ''
@@ -140,13 +140,15 @@ jobs:
       run: |
         echo "检查并处理 feeds.conf.default..."
         
-        # 处理 Packages (兼容 src-git 和 src-git-full)
+        # 处理 Packages (格式: 仓库名.git;分支名 -> 自动拼接 https://github.com/Saxon-Sun/)
         PKG_IN="${{ inputs.packages }}"
         if [ -n "$PKG_IN" ]; then
           if [[ "$PKG_IN" == src-* ]]; then
             PKG_LINE="$PKG_IN"
-          else
+          elif [[ "$PKG_IN" == http* ]]; then
             PKG_LINE="src-git packages $PKG_IN"
+          else
+            PKG_LINE="src-git packages https://github.com/Saxon-Sun/${PKG_IN}"
           fi
           echo "正在将 packages 替换为: $PKG_LINE"
           sed -i '/^src-git\(-full\)\? packages /d' feeds.conf.default
@@ -154,14 +156,16 @@ jobs:
         else
           echo "packages 留空，保留源码默认配置"
         fi
-        # 处理 LuCI (兼容 src-git 和 src-git-full)
-        
+
+        # 处理 LuCI (格式: 仓库名.git;分支名 -> 自动拼接 https://github.com/Saxon-Sun/)
         LUCI_IN="${{ inputs.luci }}"
         if [ -n "$LUCI_IN" ]; then
           if [[ "$LUCI_IN" == src-* ]]; then
             LUCI_LINE="$LUCI_IN"
-          else
+          elif [[ "$LUCI_IN" == http* ]]; then
             LUCI_LINE="src-git luci $LUCI_IN"
+          else
+            LUCI_LINE="src-git luci https://github.com/Saxon-Sun/${LUCI_IN}"
           fi
           echo "正在将 luci 替换为: $LUCI_LINE"
           sed -i '/^src-git\(-full\)\? luci /d' feeds.conf.default
